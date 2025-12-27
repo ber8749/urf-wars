@@ -58,13 +58,8 @@ export class MechController {
       }
     }
     
-    // Jump
-    if (input.jump) {
-      this.mech.jump();
-    }
-    
-    // Firing
-    if (input.fire) {
+    // Firing (Space bar or Left Click)
+    if (input.jump || input.fire) {
       const selectedWeapon = this.mech.weaponSystem.getSelectedSlot();
       this.mech.fireWeapon(selectedWeapon);
     }
