@@ -366,6 +366,10 @@ export class Mech implements Entity {
     return this.torsoYaw;
   }
   
+  getHeadPitch(): number {
+    return this.headPitch;
+  }
+  
   getModel(): MechModel {
     return this.model;
   }

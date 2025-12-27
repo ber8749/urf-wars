@@ -52,10 +52,22 @@ export class ThirdPersonCam {
   
   getTarget(): THREE.Vector3 {
     const mechPos = this.mech.getPosition();
+    const headPitch = this.mech.getHeadPitch();
+    const torsoYaw = this.mech.getTorsoYaw();
+    const mechRotation = this.mech.getRotation();
     
-    // Look at a point above the mech's center
+    // Calculate look direction based on torso yaw and head pitch
+    const combinedYaw = mechRotation.y + torsoYaw;
+    
+    // Look at a point in front of the mech, adjusted by head pitch
+    const lookDistance = 50;
     const idealLookAt = mechPos.clone();
     idealLookAt.y += this.lookAtHeight;
+    
+    // Apply head pitch to look target (negative pitch = look up)
+    idealLookAt.x -= Math.sin(combinedYaw) * Math.cos(headPitch) * lookDistance;
+    idealLookAt.y += Math.sin(headPitch) * lookDistance;
+    idealLookAt.z -= Math.cos(combinedYaw) * Math.cos(headPitch) * lookDistance;
     
     // Smooth the look-at point
     this.currentLookAt.lerp(idealLookAt, 0.15);
