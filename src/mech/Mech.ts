@@ -3,6 +3,7 @@ import { MechModel } from './MechModel';
 import { WeaponSystem } from './WeaponSystem';
 import { HeatSystem } from './HeatSystem';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { SoundManager } from '../audio/SoundManager';
 import type {
   Entity,
   ArmorZones,
@@ -53,20 +54,24 @@ export class Mech implements Entity {
   private headPitch: number = 0;
   private isGrounded: boolean = true;
   private walkTime: number = 0;
+  private lastWalkCycleSign: number = 1; // Track footstep timing
 
   // Systems
   public weaponSystem: WeaponSystem;
   public heatSystem: HeatSystem;
+  private soundManager?: SoundManager;
 
   constructor(
     id: string,
     scene: THREE.Scene,
     physicsWorld: PhysicsWorld,
-    config: MechConfig = DEFAULT_MECH_CONFIG
+    config: MechConfig = DEFAULT_MECH_CONFIG,
+    soundManager?: SoundManager
   ) {
     this.id = id;
     this.config = config;
     this.physicsWorld = physicsWorld;
+    this.soundManager = soundManager;
 
     // Initialize armor from config
     this.armor = { ...config.baseArmor };
@@ -108,8 +113,23 @@ export class Mech implements Entity {
     this.physicsBody.setEnabledRotations(false, true, false, true);
 
     // Initialize systems
-    this.weaponSystem = new WeaponSystem(this, scene, config.hardpoints);
+    this.weaponSystem = new WeaponSystem(
+      this,
+      scene,
+      config.hardpoints,
+      soundManager
+    );
     this.heatSystem = new HeatSystem(config.maxHeat, config.heatDissipation);
+
+    // Setup heat system sound callbacks
+    if (soundManager) {
+      this.heatSystem.onWarning = () => {
+        soundManager.playHeatWarning(this.heatSystem.getHeatPercentage() / 100);
+      };
+      this.heatSystem.onOverheat = () => {
+        soundManager.playOverheatAlarm();
+      };
+    }
   }
 
   update(dt: number): void {
@@ -145,10 +165,27 @@ export class Mech implements Entity {
 
     if (horizontalSpeed > 0.5 && this.isGrounded) {
       this.walkTime += dt;
-      this.model.animateWalk(
-        this.walkTime,
-        horizontalSpeed / this.config.maxSpeed
-      );
+      const normalizedSpeed = horizontalSpeed / this.config.maxSpeed;
+      this.model.animateWalk(this.walkTime, normalizedSpeed);
+
+      // Trigger footstep sounds on walk cycle zero-crossings
+      if (this.soundManager) {
+        const animationRate =
+          8 * Math.sqrt(Math.max(0, Math.min(1.5, normalizedSpeed)));
+        const walkCycle = Math.sin(this.walkTime * animationRate);
+        const currentSign = walkCycle >= 0 ? 1 : -1;
+
+        if (currentSign !== this.lastWalkCycleSign) {
+          // Foot hit ground - play footstep
+          const isLeftFoot = currentSign === 1;
+          this.soundManager.playFootstep(
+            Math.min(1, normalizedSpeed),
+            isLeftFoot
+          );
+          this.soundManager.playServoWhine(normalizedSpeed * 0.5);
+          this.lastWalkCycleSign = currentSign;
+        }
+      }
     } else {
       this.model.resetPose();
     }
@@ -156,6 +193,13 @@ export class Mech implements Entity {
     // Update systems
     this.heatSystem.update(dt);
     this.weaponSystem.update(dt);
+
+    // Play continuous heat warnings (throttled internally by SoundManager)
+    if (this.soundManager && this.heatSystem.isWarning()) {
+      this.soundManager.playHeatWarning(
+        this.heatSystem.getHeatPercentage() / 100
+      );
+    }
   }
 
   // Movement methods

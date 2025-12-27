@@ -10,6 +10,7 @@ import { MechController } from '../mech/MechController';
 import { CameraController } from '../camera/CameraController';
 import { HUD } from '../rendering/HUD';
 import { PostProcessing } from '../rendering/PostProcessing';
+import { SoundManager } from '../audio/SoundManager';
 
 export class Game {
   private container: HTMLElement;
@@ -29,6 +30,7 @@ export class Game {
   private mechController!: MechController;
   private dayNightCycle!: DayNightCycle;
   private skybox!: Skybox;
+  private soundManager!: SoundManager;
 
   // Lights (stored for day/night cycle updates)
   private sunLight!: THREE.DirectionalLight;
@@ -39,6 +41,7 @@ export class Game {
   private accumulator: number = 0;
   private readonly FIXED_TIMESTEP: number = 1 / 60; // 60Hz fixed update
   private isRunning: boolean = false;
+  private audioInitialized: boolean = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -73,8 +76,19 @@ export class Game {
     // Slow down the cycle for gameplay (full cycle in ~5 minutes)
     this.dayNightCycle.setCycleSpeed(0.003);
 
-    // Create player mech
-    this.playerMech = new Mech('player-1', this.scene, this.physicsWorld);
+    // Setup sound manager
+    this.soundManager = new SoundManager();
+    // Attach audio listener to camera for 3D spatial audio
+    this.camera.add(this.soundManager.getListener());
+
+    // Create player mech with sound manager
+    this.playerMech = new Mech(
+      'player-1',
+      this.scene,
+      this.physicsWorld,
+      undefined,
+      this.soundManager
+    );
     this.entityManager.addEntity(this.playerMech);
 
     // Setup mech controller
@@ -170,6 +184,25 @@ export class Game {
     this.lastTime = performance.now();
     // Don't auto-lock pointer - wait for user click (handled in InputManager)
     this.gameLoop();
+
+    // Initialize audio on first user interaction (click to start)
+    this.container.addEventListener('click', () => this.initAudio(), {
+      once: false,
+    });
+  }
+
+  private async initAudio(): Promise<void> {
+    if (this.audioInitialized) {
+      // Just resume if already initialized
+      await this.soundManager.resume();
+      return;
+    }
+
+    await this.soundManager.init();
+    this.audioInitialized = true;
+
+    // Start cockpit ambience
+    this.soundManager.startCockpitAmbience();
   }
 
   stop(): void {

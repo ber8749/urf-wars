@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Mech } from './Mech';
 import type { HardpointConfig, WeaponConfig, WeaponType } from '../types';
+import type { SoundManager } from '../audio/SoundManager';
 
 const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
   laser: {
@@ -74,6 +75,7 @@ export class WeaponSystem {
   private projectiles: Projectile[] = [];
   private laserBeams: LaserBeam[] = [];
   private selectedSlot: number = 1;
+  private soundManager?: SoundManager;
 
   // Visual effects materials
   private autocannonMaterial: THREE.MeshBasicMaterial;
@@ -83,9 +85,15 @@ export class WeaponSystem {
   private flameMaterial: THREE.MeshBasicMaterial;
   private laserBeamMaterial: THREE.MeshBasicMaterial;
 
-  constructor(mech: Mech, scene: THREE.Scene, hardpoints: HardpointConfig[]) {
+  constructor(
+    mech: Mech,
+    scene: THREE.Scene,
+    hardpoints: HardpointConfig[],
+    soundManager?: SoundManager
+  ) {
     this.mech = mech;
     this.scene = scene;
+    this.soundManager = soundManager;
 
     // Autocannon - red tracer (like old laser)
     this.autocannonMaterial = new THREE.MeshBasicMaterial({
@@ -272,6 +280,24 @@ export class WeaponSystem {
       this.createLaserBeam(weapon, firingPos, direction);
     } else {
       this.createProjectile(weapon, firingPos, direction);
+    }
+
+    // Play weapon sound
+    if (this.soundManager) {
+      switch (weapon.config.type) {
+        case 'laser':
+          this.soundManager.playLaser();
+          break;
+        case 'autocannon':
+          this.soundManager.playAutocannon();
+          break;
+        case 'ppc':
+          this.soundManager.playPPC();
+          break;
+        case 'missile':
+          this.soundManager.playMissile();
+          break;
+      }
     }
 
     // Start cooldown
@@ -471,8 +497,9 @@ export class WeaponSystem {
   }
 
   selectWeapon(slot: number): void {
-    if (this.weapons.has(slot)) {
+    if (this.weapons.has(slot) && slot !== this.selectedSlot) {
       this.selectedSlot = slot;
+      this.soundManager?.playWeaponSwitch();
     }
   }
 
