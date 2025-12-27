@@ -31,7 +31,7 @@ const DEFAULT_MECH_CONFIG: MechConfig = {
   },
   hardpoints: [
     { slot: 1, position: { x: -2.4, y: 0, z: 1 }, weaponType: 'laser' },
-    { slot: 2, position: { x: 2.4, y: 0, z: 1 }, weaponType: 'laser' },
+    { slot: 2, position: { x: 2.4, y: 0, z: 1 }, weaponType: 'autocannon' },
     { slot: 3, position: { x: -1.5, y: 1.5, z: 1 }, weaponType: 'ppc' },
     { slot: 4, position: { x: 1.5, y: 1.5, z: 1 }, weaponType: 'missile' },
   ],
