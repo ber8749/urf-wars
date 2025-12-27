@@ -445,31 +445,43 @@ export class MechModel {
   // Get positions for hardpoints
   getWeaponPosition(slot: number): THREE.Vector3 {
     const worldPos = new THREE.Vector3();
+    const localOffset = new THREE.Vector3();
+    let sourceGroup: THREE.Group;
 
     switch (slot) {
-      case 1: // Left arm
-        this.leftArmGroup.getWorldPosition(worldPos);
-        worldPos.y -= 4.5;
-        worldPos.z += 1.0;
+      case 1: // Left arm - weapon at end of arm barrel
+        sourceGroup = this.leftArmGroup;
+        localOffset.set(0, -4.5, 1.5); // Down and forward in local space
         break;
-      case 2: // Right arm
-        this.rightArmGroup.getWorldPosition(worldPos);
-        worldPos.y -= 4.5;
-        worldPos.z += 1.0;
+      case 2: // Right arm - weapon at end of arm barrel
+        sourceGroup = this.rightArmGroup;
+        localOffset.set(0, -4.5, 1.5); // Down and forward in local space
         break;
-      case 3: // Left torso
-        this.torsoGroup.getWorldPosition(worldPos);
-        worldPos.x -= 1.5;
-        worldPos.z += 1.0;
+      case 3: // Left torso - shoulder mounted
+        sourceGroup = this.torsoGroup;
+        localOffset.set(-1.5, 0, 1.5); // Left and forward in local space
         break;
-      case 4: // Right torso (missiles)
-        this.torsoGroup.getWorldPosition(worldPos);
-        worldPos.x += 1.5;
-        worldPos.z += 1.0;
+      case 4: // Right torso - missile rack
+        sourceGroup = this.torsoGroup;
+        localOffset.set(1.5, 0, 1.5); // Right and forward in local space
         break;
       default:
-        this.torsoGroup.getWorldPosition(worldPos);
+        sourceGroup = this.torsoGroup;
+        localOffset.set(0, 0, 1.0);
     }
+
+    // Get the world position of the source group
+    sourceGroup.getWorldPosition(worldPos);
+
+    // Get the world quaternion of the source group to rotate the offset
+    const worldQuat = new THREE.Quaternion();
+    sourceGroup.getWorldQuaternion(worldQuat);
+
+    // Rotate the local offset by the group's world rotation
+    localOffset.applyQuaternion(worldQuat);
+
+    // Add the rotated offset to the world position
+    worldPos.add(localOffset);
 
     return worldPos;
   }

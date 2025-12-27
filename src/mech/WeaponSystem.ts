@@ -62,7 +62,14 @@ interface Projectile {
   flame?: THREE.Mesh;
 }
 
-interface LaserBeam {
+interface LaserBeamEffect {
+  outerMesh: THREE.Mesh;
+  innerMesh: THREE.Mesh;
+  lifetime: number;
+  maxLifetime: number;
+}
+
+interface MuzzleFlash {
   mesh: THREE.Mesh;
   lifetime: number;
   maxLifetime: number;
@@ -73,7 +80,8 @@ export class WeaponSystem {
   private scene: THREE.Scene;
   private weapons: Map<number, Weapon> = new Map();
   private projectiles: Projectile[] = [];
-  private laserBeams: LaserBeam[] = [];
+  private laserBeams: LaserBeamEffect[] = [];
+  private muzzleFlashes: MuzzleFlash[] = [];
   private selectedSlot: number = 1;
   private soundManager?: SoundManager;
 
@@ -84,6 +92,8 @@ export class WeaponSystem {
   private missileMaterial: THREE.MeshBasicMaterial;
   private flameMaterial: THREE.MeshBasicMaterial;
   private laserBeamMaterial: THREE.MeshBasicMaterial;
+  private laserBeamCoreMaterial: THREE.MeshBasicMaterial;
+  private muzzleFlashMaterial: THREE.MeshBasicMaterial;
 
   constructor(
     mech: Mech,
@@ -139,6 +149,22 @@ export class WeaponSystem {
       blending: THREE.AdditiveBlending,
     });
 
+    // Muzzle flash - bright yellow/orange burst
+    this.muzzleFlashMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffaa00,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+    });
+
+    // Laser beam inner core - white/pink hot center
+    this.laserBeamCoreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffcccc,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+    });
+
     // Initialize weapons from hardpoints
     for (const hardpoint of hardpoints) {
       const config = WEAPON_CONFIGS[hardpoint.weaponType];
@@ -170,6 +196,9 @@ export class WeaponSystem {
 
     // Update laser beams (fade out)
     this.updateLaserBeams(dt);
+
+    // Update muzzle flashes (fade out)
+    this.updateMuzzleFlashes(dt);
   }
 
   private updateProjectiles(dt: number): void {
@@ -224,15 +253,38 @@ export class WeaponSystem {
       beam.lifetime -= dt;
 
       if (beam.lifetime <= 0) {
-        this.scene.remove(beam.mesh);
-        beam.mesh.geometry.dispose();
+        this.scene.remove(beam.outerMesh);
+        this.scene.remove(beam.innerMesh);
+        beam.outerMesh.geometry.dispose();
+        beam.innerMesh.geometry.dispose();
         this.laserBeams.splice(i, 1);
         continue;
       }
 
-      // Fade out
-      const opacity = beam.lifetime / beam.maxLifetime;
-      (beam.mesh.material as THREE.MeshBasicMaterial).opacity = opacity * 0.8;
+      // Fade out both beams
+      const t = beam.lifetime / beam.maxLifetime;
+      (beam.outerMesh.material as THREE.MeshBasicMaterial).opacity = t * 0.8;
+      (beam.innerMesh.material as THREE.MeshBasicMaterial).opacity = t * 0.9;
+    }
+  }
+
+  private updateMuzzleFlashes(dt: number): void {
+    for (let i = this.muzzleFlashes.length - 1; i >= 0; i--) {
+      const flash = this.muzzleFlashes[i];
+      flash.lifetime -= dt;
+
+      if (flash.lifetime <= 0) {
+        this.scene.remove(flash.mesh);
+        flash.mesh.geometry.dispose();
+        (flash.mesh.material as THREE.Material).dispose();
+        this.muzzleFlashes.splice(i, 1);
+        continue;
+      }
+
+      // Fade out and shrink
+      const t = flash.lifetime / flash.maxLifetime;
+      (flash.mesh.material as THREE.MeshBasicMaterial).opacity = t;
+      flash.mesh.scale.setScalar(0.5 + t * 0.5); // Shrink from 1.0 to 0.5
     }
   }
 
@@ -318,24 +370,69 @@ export class WeaponSystem {
   ): void {
     // Create continuous beam from position to max range
     const beamLength = weapon.config.range;
-    const geometry = new THREE.CylinderGeometry(0.08, 0.08, beamLength, 6);
 
-    // Offset so beam starts at origin and extends forward
-    geometry.translate(0, beamLength / 2, 0);
-    geometry.rotateX(Math.PI / 2);
+    // Outer beam - red glow
+    const outerGeometry = new THREE.CylinderGeometry(0.1, 0.1, beamLength, 6);
+    outerGeometry.translate(0, beamLength / 2, 0);
+    outerGeometry.rotateX(Math.PI / 2);
 
-    const material = this.laserBeamMaterial.clone();
-    const mesh = new THREE.Mesh(geometry, material);
+    const outerMaterial = this.laserBeamMaterial.clone();
+    const outerMesh = new THREE.Mesh(outerGeometry, outerMaterial);
+    outerMesh.position.copy(position);
+    outerMesh.lookAt(position.clone().add(direction));
 
-    mesh.position.copy(position);
-    mesh.lookAt(position.clone().add(direction));
+    // Inner core - white/pink hot center
+    const innerGeometry = new THREE.CylinderGeometry(0.04, 0.04, beamLength, 6);
+    innerGeometry.translate(0, beamLength / 2, 0);
+    innerGeometry.rotateX(Math.PI / 2);
 
-    this.scene.add(mesh);
+    const innerMaterial = this.laserBeamCoreMaterial.clone();
+    const innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
+    innerMesh.position.copy(position);
+    innerMesh.lookAt(position.clone().add(direction));
+
+    this.scene.add(outerMesh);
+    this.scene.add(innerMesh);
 
     this.laserBeams.push({
-      mesh,
+      outerMesh,
+      innerMesh,
       lifetime: 0.15,
       maxLifetime: 0.15,
+    });
+
+    // Create red/orange muzzle flash for laser
+    this.createLaserMuzzleFlash(position.clone());
+  }
+
+  private createLaserMuzzleFlash(position: THREE.Vector3): void {
+    // Red-orange flash for laser
+    const coreGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff6644,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+
+    const glowGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff2200,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending,
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    glow.add(core);
+    glow.position.copy(position);
+
+    this.scene.add(glow);
+
+    this.muzzleFlashes.push({
+      mesh: glow,
+      lifetime: 0.08,
+      maxLifetime: 0.08,
     });
   }
 
@@ -350,11 +447,15 @@ export class WeaponSystem {
       case 'autocannon':
         // Autocannon - red tracer cylinder (like old laser)
         mesh = this.createAutocannonProjectile();
+        // Create muzzle flash at firing position
+        this.createMuzzleFlash(position.clone());
         break;
 
       case 'ppc':
         // PPC - blue sparkling sphere
         mesh = this.createPPCProjectile();
+        // Create blue electrical muzzle flash
+        this.createPPCMuzzleFlash(position.clone());
         break;
 
       case 'missile':
@@ -404,6 +505,66 @@ export class WeaponSystem {
     const geometry = new THREE.CylinderGeometry(0.12, 0.12, 5, 6);
     geometry.rotateX(Math.PI / 2);
     return new THREE.Mesh(geometry, this.autocannonMaterial);
+  }
+
+  private createMuzzleFlash(position: THREE.Vector3): void {
+    // Create a bright flash using multiple overlapping planes for a starburst effect
+
+    // Core bright sphere
+    const coreGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+    const coreMaterial = this.muzzleFlashMaterial.clone();
+    coreMaterial.color.setHex(0xffffcc); // Bright white-yellow core
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+
+    // Outer glow sphere
+    const glowGeometry = new THREE.SphereGeometry(0.6, 8, 8);
+    const glowMaterial = this.muzzleFlashMaterial.clone();
+    glowMaterial.opacity = 0.6;
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+
+    // Use glow mesh as the main flash mesh (simpler cleanup)
+    glow.add(core);
+    glow.position.copy(position);
+
+    this.scene.add(glow);
+
+    this.muzzleFlashes.push({
+      mesh: glow,
+      lifetime: 0.06, // Very brief flash
+      maxLifetime: 0.06,
+    });
+  }
+
+  private createPPCMuzzleFlash(position: THREE.Vector3): void {
+    // Blue electrical burst for PPC
+    const coreGeometry = new THREE.SphereGeometry(0.4, 8, 8);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xaaffff,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+
+    // Outer electrical glow
+    const glowGeometry = new THREE.SphereGeometry(0.8, 8, 8);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0088ff,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    glow.add(core);
+    glow.position.copy(position);
+
+    this.scene.add(glow);
+
+    this.muzzleFlashes.push({
+      mesh: glow,
+      lifetime: 0.1, // Slightly longer for PPC
+      maxLifetime: 0.1,
+    });
   }
 
   private createPPCProjectile(): THREE.Group {
@@ -527,10 +688,20 @@ export class WeaponSystem {
 
     // Clean up laser beams
     for (const beam of this.laserBeams) {
-      this.scene.remove(beam.mesh);
-      beam.mesh.geometry.dispose();
+      this.scene.remove(beam.outerMesh);
+      this.scene.remove(beam.innerMesh);
+      beam.outerMesh.geometry.dispose();
+      beam.innerMesh.geometry.dispose();
     }
     this.laserBeams = [];
+
+    // Clean up muzzle flashes
+    for (const flash of this.muzzleFlashes) {
+      this.scene.remove(flash.mesh);
+      flash.mesh.geometry.dispose();
+      (flash.mesh.material as THREE.Material).dispose();
+    }
+    this.muzzleFlashes = [];
 
     // Dispose materials
     this.autocannonMaterial.dispose();
@@ -539,5 +710,7 @@ export class WeaponSystem {
     this.missileMaterial.dispose();
     this.flameMaterial.dispose();
     this.laserBeamMaterial.dispose();
+    this.laserBeamCoreMaterial.dispose();
+    this.muzzleFlashMaterial.dispose();
   }
 }
