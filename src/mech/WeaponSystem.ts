@@ -57,8 +57,11 @@ interface Projectile {
   // For PPC sparkle animation
   sparkleTime?: number;
   sparkles?: THREE.Points;
-  // For missile flame
+  // For missile flame and smoke
   flame?: THREE.Mesh;
+  smoke?: THREE.Points;
+  smokePositions?: Float32Array;
+  smokeIndex?: number;
 }
 
 interface LaserBeam {
@@ -81,6 +84,7 @@ export class WeaponSystem {
   private ppcSparkleMaterial: THREE.PointsMaterial;
   private missileMaterial: THREE.MeshBasicMaterial;
   private flameMaterial: THREE.MeshBasicMaterial;
+  private smokeMaterial: THREE.PointsMaterial;
   private laserBeamMaterial: THREE.MeshBasicMaterial;
 
   constructor(mech: Mech, scene: THREE.Scene, hardpoints: HardpointConfig[]) {
@@ -110,9 +114,9 @@ export class WeaponSystem {
       blending: THREE.AdditiveBlending,
     });
 
-    // Missile body - metallic orange
+    // Missile body - white
     this.missileMaterial = new THREE.MeshBasicMaterial({
-      color: 0x888888,
+      color: 0xffffff,
     });
 
     // Missile flame - bright orange/yellow
@@ -121,6 +125,15 @@ export class WeaponSystem {
       transparent: true,
       opacity: 0.9,
       blending: THREE.AdditiveBlending,
+    });
+
+    // Missile smoke - gray particles
+    this.smokeMaterial = new THREE.PointsMaterial({
+      color: 0xaaaaaa,
+      size: 0.4,
+      transparent: true,
+      opacity: 0.6,
+      sizeAttenuation: true,
     });
 
     // Laser beam - bright red continuous beam
@@ -196,16 +209,30 @@ export class WeaponSystem {
         proj.sparkles.scale.setScalar(scale);
       }
 
-      // Missile flame flicker
-      if (proj.type === 'missile' && proj.flame) {
-        // Random flicker intensity
-        const flicker = 0.7 + Math.random() * 0.3;
-        proj.flame.scale.set(flicker, 1 + Math.random() * 0.5, flicker);
+      // Missile flame flicker and smoke trail
+      if (proj.type === 'missile') {
+        if (proj.flame) {
+          // Random flicker intensity
+          const flicker = 0.7 + Math.random() * 0.3;
+          proj.flame.scale.set(flicker, 1 + Math.random() * 0.5, flicker);
 
-        // Slight color variation
-        (proj.flame.material as THREE.MeshBasicMaterial).color.setHex(
-          Math.random() > 0.5 ? 0xff6600 : 0xffaa00
-        );
+          // Slight color variation
+          (proj.flame.material as THREE.MeshBasicMaterial).color.setHex(
+            Math.random() > 0.5 ? 0xff6600 : 0xffaa00
+          );
+        }
+
+        // Animate smoke trail - spread particles outward and make them drift
+        if (proj.smoke && proj.smokePositions) {
+          const positions = proj.smokePositions;
+          for (let i = 0; i < positions.length / 3; i++) {
+            // Add random drift to each smoke particle
+            positions[i * 3] += (Math.random() - 0.5) * 0.1; // X drift
+            positions[i * 3 + 1] += (Math.random() - 0.5) * 0.1; // Y drift
+            positions[i * 3 + 2] -= 0.15; // Move backward relative to missile
+          }
+          proj.smoke.geometry.attributes.position.needsUpdate = true;
+        }
       }
     }
   }
@@ -368,14 +395,23 @@ export class WeaponSystem {
       projectile.flame = (mesh as THREE.Group).children.find(
         (c) => c instanceof THREE.Mesh && c.name === 'flame'
       ) as THREE.Mesh;
+      projectile.smoke = (mesh as THREE.Group).children.find(
+        (c) => c instanceof THREE.Points && c.name === 'smoke'
+      ) as THREE.Points;
+      if (projectile.smoke) {
+        projectile.smokePositions = (
+          projectile.smoke.geometry.attributes.position as THREE.BufferAttribute
+        ).array as Float32Array;
+        projectile.smokeIndex = 0;
+      }
     }
 
     this.projectiles.push(projectile);
   }
 
   private createAutocannonProjectile(): THREE.Mesh {
-    // Red tracer - elongated cylinder like old laser
-    const geometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 4);
+    // Red tracer - elongated cylinder, bigger and more visible
+    const geometry = new THREE.CylinderGeometry(0.12, 0.12, 5, 6);
     geometry.rotateX(Math.PI / 2);
     return new THREE.Mesh(geometry, this.autocannonMaterial);
   }
@@ -429,35 +465,35 @@ export class WeaponSystem {
   private createMissileProjectile(): THREE.Group {
     const group = new THREE.Group();
 
-    // Missile body - cone pointing forward
-    const bodyGeometry = new THREE.ConeGeometry(0.1, 0.6, 6);
+    // Missile body - larger white cone pointing forward
+    const bodyGeometry = new THREE.ConeGeometry(0.25, 1.5, 8);
     bodyGeometry.rotateX(Math.PI / 2);
-    bodyGeometry.translate(0, 0, 0.15); // Offset so base is at origin
+    bodyGeometry.translate(0, 0, 0.4); // Offset so base is at origin
     const body = new THREE.Mesh(bodyGeometry, this.missileMaterial);
     group.add(body);
 
-    // Fins on the missile
-    const finGeometry = new THREE.BoxGeometry(0.02, 0.15, 0.1);
+    // Fins on the missile - larger
+    const finGeometry = new THREE.BoxGeometry(0.05, 0.4, 0.25);
     for (let i = 0; i < 4; i++) {
       const fin = new THREE.Mesh(finGeometry, this.missileMaterial);
       const angle = (i / 4) * Math.PI * 2;
-      fin.position.set(Math.cos(angle) * 0.08, Math.sin(angle) * 0.08, -0.1);
+      fin.position.set(Math.cos(angle) * 0.2, Math.sin(angle) * 0.2, -0.25);
       fin.rotation.z = angle;
       group.add(fin);
     }
 
-    // Flame effect - cone pointing backward
-    const flameGeometry = new THREE.ConeGeometry(0.08, 0.4, 6);
+    // Flame effect - cone pointing backward (larger)
+    const flameGeometry = new THREE.ConeGeometry(0.2, 0.8, 6);
     flameGeometry.rotateX(-Math.PI / 2);
-    flameGeometry.translate(0, 0, -0.35); // Position behind missile
+    flameGeometry.translate(0, 0, -0.6); // Position behind missile
     const flame = new THREE.Mesh(flameGeometry, this.flameMaterial.clone());
     flame.name = 'flame';
     group.add(flame);
 
     // Inner flame (brighter core)
-    const innerFlameGeometry = new THREE.ConeGeometry(0.04, 0.25, 6);
+    const innerFlameGeometry = new THREE.ConeGeometry(0.1, 0.5, 6);
     innerFlameGeometry.rotateX(-Math.PI / 2);
-    innerFlameGeometry.translate(0, 0, -0.25);
+    innerFlameGeometry.translate(0, 0, -0.45);
     const innerFlameMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffaa,
       transparent: true,
@@ -466,6 +502,24 @@ export class WeaponSystem {
     });
     const innerFlame = new THREE.Mesh(innerFlameGeometry, innerFlameMaterial);
     group.add(innerFlame);
+
+    // Smoke trail particles
+    const smokeCount = 30;
+    const smokePositions = new Float32Array(smokeCount * 3);
+    // Initialize all smoke particles at origin (behind missile)
+    for (let i = 0; i < smokeCount; i++) {
+      smokePositions[i * 3] = 0;
+      smokePositions[i * 3 + 1] = 0;
+      smokePositions[i * 3 + 2] = -0.8 - i * 0.5; // Trail behind
+    }
+    const smokeGeometry = new THREE.BufferGeometry();
+    smokeGeometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(smokePositions, 3)
+    );
+    const smoke = new THREE.Points(smokeGeometry, this.smokeMaterial);
+    smoke.name = 'smoke';
+    group.add(smoke);
 
     return group;
   }
@@ -511,6 +565,7 @@ export class WeaponSystem {
     this.ppcSparkleMaterial.dispose();
     this.missileMaterial.dispose();
     this.flameMaterial.dispose();
+    this.smokeMaterial.dispose();
     this.laserBeamMaterial.dispose();
   }
 }

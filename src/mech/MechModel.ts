@@ -48,8 +48,9 @@ export class MechModel {
     this.headGroup.position.set(0, 2.5, 0);
     this.leftArmGroup.position.set(-2.2, 1.5, 0);
     this.rightArmGroup.position.set(2.2, 1.5, 0);
-    this.leftLegGroup.position.set(-1.0, -0.5, 0);
-    this.rightLegGroup.position.set(1.0, -0.5, 0);
+    // Legs attach below the torso (torso bottom is at Y=4.0, hip radius is 0.5)
+    this.leftLegGroup.position.set(-1.0, 3.5, 0);
+    this.rightLegGroup.position.set(1.0, 3.5, 0);
     this.torsoGroup.position.set(0, 5.5, 0);
 
     // Enable shadows

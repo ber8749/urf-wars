@@ -320,10 +320,13 @@ export class Mech implements Entity {
   getTorsoWorldRotation(): THREE.Euler {
     const baseRotation = this.getRotation();
     // Add PI to match the mesh rotation (which is flipped 180°)
+    // Use 'YXZ' order: apply yaw first (face direction), then pitch (tilt up/down)
+    // Negate pitch because the PI yaw flip inverts the pitch direction
     return new THREE.Euler(
-      this.headPitch,
+      -this.headPitch,
       baseRotation.y + this.torsoYaw + Math.PI,
-      0
+      0,
+      'YXZ'
     );
   }
 
