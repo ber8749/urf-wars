@@ -401,10 +401,21 @@ export class MechModel {
   }
 
   animateWalk(time: number, speed: number): void {
-    const walkCycle = time * speed * 3;
-    const legSwing = Math.sin(walkCycle) * 0.3 * Math.min(speed, 1);
+    // Clamp speed to valid range and use sqrt for more natural animation scaling
+    const clampedSpeed = Math.max(0, Math.min(speed, 1.5));
+
+    // Animation rate increases with speed, but use sqrt for smoother scaling at high speeds
+    // Base rate of 8 gives good leg turnover, sqrt(speed) prevents it from getting too fast
+    const animationRate = 8 * Math.sqrt(clampedSpeed);
+    const walkCycle = time * animationRate;
+
+    // Leg swing amplitude scales with speed but caps at reasonable maximum
+    const legSwingAmplitude = 0.35 * Math.min(clampedSpeed, 1);
+    const legSwing = Math.sin(walkCycle) * legSwingAmplitude;
+
+    // Body bob - double frequency, scaled to speed
     const bobAmount =
-      Math.abs(Math.sin(walkCycle * 2)) * 0.1 * Math.min(speed, 1);
+      Math.abs(Math.sin(walkCycle * 2)) * 0.08 * Math.min(clampedSpeed, 1);
 
     // Leg swing
     this.leftLegGroup.rotation.x = legSwing;
@@ -415,11 +426,11 @@ export class MechModel {
 
     // Slight torso sway
     this.torsoGroup.rotation.z =
-      Math.sin(walkCycle) * 0.02 * Math.min(speed, 1);
+      Math.sin(walkCycle) * 0.015 * Math.min(clampedSpeed, 1);
 
     // Arm pitch (from aiming) + walk counter-swing
-    this.leftArmGroup.rotation.x = this.armPitch + -legSwing * 0.5;
-    this.rightArmGroup.rotation.x = this.armPitch + legSwing * 0.5;
+    this.leftArmGroup.rotation.x = this.armPitch + -legSwing * 0.4;
+    this.rightArmGroup.rotation.x = this.armPitch + legSwing * 0.4;
   }
 
   resetPose(): void {
