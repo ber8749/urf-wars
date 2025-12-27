@@ -59,58 +59,62 @@ export class MechModel {
   }
   
   private createMaterials(): void {
-    // Main armor - military green/gray
+    // Main armor - bright steel blue (high visibility!)
     const armorMain = new THREE.MeshStandardMaterial({
-      color: 0x4a5c4a,
-      roughness: 0.7,
-      metalness: 0.3,
+      color: 0x7799bb,
+      roughness: 0.5,
+      metalness: 0.6,
       flatShading: true,
+      emissive: 0x223344,
+      emissiveIntensity: 0.15,
     });
     this.materials.set('armor', armorMain);
     
-    // Secondary armor - darker accent
+    // Secondary armor - lighter gray-blue
     const armorSecondary = new THREE.MeshStandardMaterial({
-      color: 0x2d3a2d,
-      roughness: 0.8,
-      metalness: 0.2,
+      color: 0x99aabb,
+      roughness: 0.6,
+      metalness: 0.4,
       flatShading: true,
+      emissive: 0x334455,
+      emissiveIntensity: 0.1,
     });
     this.materials.set('armorSecondary', armorSecondary);
     
-    // Joint/mechanical parts
+    // Joint/mechanical parts - visible dark gray
     const joint = new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a,
+      color: 0x556677,
       roughness: 0.4,
-      metalness: 0.8,
+      metalness: 0.7,
       flatShading: true,
     });
     this.materials.set('joint', joint);
     
-    // Accent color - warning orange
+    // Accent color - bright warning orange (glowing)
     const accent = new THREE.MeshStandardMaterial({
-      color: 0xff6600,
-      roughness: 0.5,
-      metalness: 0.4,
-      emissive: 0xff3300,
-      emissiveIntensity: 0.2,
+      color: 0xff8800,
+      roughness: 0.4,
+      metalness: 0.5,
+      emissive: 0xff4400,
+      emissiveIntensity: 0.6,
       flatShading: true,
     });
     this.materials.set('accent', accent);
     
-    // Cockpit glass
+    // Cockpit glass - bright cyan glow
     const glass = new THREE.MeshStandardMaterial({
-      color: 0x00ffcc,
+      color: 0x00ffee,
       roughness: 0.1,
       metalness: 0.9,
-      emissive: 0x00aa88,
-      emissiveIntensity: 0.5,
+      emissive: 0x00ffcc,
+      emissiveIntensity: 0.8,
       flatShading: true,
     });
     this.materials.set('glass', glass);
     
-    // Weapon barrel
+    // Weapon barrel - metallic
     const weapon = new THREE.MeshStandardMaterial({
-      color: 0x333333,
+      color: 0x667788,
       roughness: 0.3,
       metalness: 0.9,
       flatShading: true,

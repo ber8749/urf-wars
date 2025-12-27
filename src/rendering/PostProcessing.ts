@@ -15,16 +15,16 @@ export class PostProcessing {
   private postScene: THREE.Scene;
   private postCamera: THREE.OrthographicCamera;
   
-  // Settings
+  // Settings - kept minimal to maintain brightness
   private settings = {
     scanlines: true,
-    scanlineIntensity: 0.04,
+    scanlineIntensity: 0.02,  // Very subtle
     vignette: true,
-    vignetteIntensity: 0.25,
+    vignetteIntensity: 0.1,   // Minimal vignette
     bloom: true,
-    bloomIntensity: 0.2,
+    bloomIntensity: 0.15,
     chromaticAberration: true,
-    aberrationAmount: 0.001,
+    aberrationAmount: 0.0005,
     colorGrading: true,
   };
   

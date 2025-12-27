@@ -4,6 +4,7 @@ import { InputManager } from './InputManager';
 import { PhysicsWorld, initPhysics } from '../physics/PhysicsWorld';
 import { TerrainGenerator } from '../world/TerrainGenerator';
 import { Skybox } from '../world/Skybox';
+import { DayNightCycle } from '../world/DayNightCycle';
 import { Mech } from '../mech/Mech';
 import { MechController } from '../mech/MechController';
 import { CameraController } from '../camera/CameraController';
@@ -26,6 +27,13 @@ export class Game {
   
   private playerMech!: Mech;
   private mechController!: MechController;
+  private dayNightCycle!: DayNightCycle;
+  private skybox!: Skybox;
+  
+  // Lights (stored for day/night cycle updates)
+  private sunLight!: THREE.DirectionalLight;
+  private ambientLight!: THREE.AmbientLight;
+  private hemiLight!: THREE.HemisphereLight;
   
   private lastTime: number = 0;
   private accumulator: number = 0;
@@ -52,7 +60,18 @@ export class Game {
     
     // Setup world
     this.terrainGenerator = new TerrainGenerator(this.scene, this.physicsWorld);
-    new Skybox(this.scene);
+    this.skybox = new Skybox(this.scene);
+    
+    // Setup day/night cycle (dusk to dawn, never too dark)
+    this.dayNightCycle = new DayNightCycle(
+      this.scene,
+      this.skybox,
+      this.sunLight,
+      this.ambientLight,
+      this.hemiLight
+    );
+    // Slow down the cycle for gameplay (full cycle in ~5 minutes)
+    this.dayNightCycle.setCycleSpeed(0.003);
     
     // Create player mech
     this.playerMech = new Mech('player-1', this.scene, this.physicsWorld);
@@ -101,14 +120,14 @@ export class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 2.0;
+    this.renderer.toneMappingExposure = 3.0; // Very bright
     this.container.appendChild(this.renderer.domElement);
   }
   
   private setupScene(): void {
     this.scene = new THREE.Scene();
-    // Light fog matching the sky horizon
-    this.scene.fog = new THREE.FogExp2(0x667788, 0.001);
+    // Very light fog - doesn't darken the scene much
+    this.scene.fog = new THREE.FogExp2(0x889999, 0.0005);
     
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -120,28 +139,28 @@ export class Game {
   }
   
   private setupLighting(): void {
-    // Ambient light for base illumination - bright
-    const ambientLight = new THREE.AmbientLight(0x8899bb, 1.2);
-    this.scene.add(ambientLight);
+    // Ambient light for base illumination - VERY BRIGHT
+    this.ambientLight = new THREE.AmbientLight(0xccddff, 2.0);
+    this.scene.add(this.ambientLight);
     
-    // Main directional light (sun) - very bright
-    const sunLight = new THREE.DirectionalLight(0xffffff, 3.0);
-    sunLight.position.set(100, 200, 100);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 10;
-    sunLight.shadow.camera.far = 500;
-    sunLight.shadow.camera.left = -150;
-    sunLight.shadow.camera.right = 150;
-    sunLight.shadow.camera.top = 150;
-    sunLight.shadow.camera.bottom = -150;
-    sunLight.shadow.bias = -0.0005;
-    this.scene.add(sunLight);
+    // Main directional light (sun/moon) - VERY BRIGHT
+    this.sunLight = new THREE.DirectionalLight(0xffffff, 5.0);
+    this.sunLight.position.set(100, 200, 100);
+    this.sunLight.castShadow = true;
+    this.sunLight.shadow.mapSize.width = 2048;
+    this.sunLight.shadow.mapSize.height = 2048;
+    this.sunLight.shadow.camera.near = 10;
+    this.sunLight.shadow.camera.far = 500;
+    this.sunLight.shadow.camera.left = -150;
+    this.sunLight.shadow.camera.right = 150;
+    this.sunLight.shadow.camera.top = 150;
+    this.sunLight.shadow.camera.bottom = -150;
+    this.sunLight.shadow.bias = -0.0005;
+    this.scene.add(this.sunLight);
     
-    // Hemisphere light for sky/ground color variation - bright
-    const hemiLight = new THREE.HemisphereLight(0xccddff, 0x998866, 1.0);
-    this.scene.add(hemiLight);
+    // Hemisphere light for sky/ground color variation - BRIGHT
+    this.hemiLight = new THREE.HemisphereLight(0xeeffff, 0xccbbaa, 1.5);
+    this.scene.add(this.hemiLight);
   }
   
   start(): void {
@@ -185,6 +204,9 @@ export class Game {
     
     // Update physics
     this.physicsWorld.step(dt);
+    
+    // Update day/night cycle
+    this.dayNightCycle.update(dt);
     
     // Update all entities
     this.entityManager.update(dt);

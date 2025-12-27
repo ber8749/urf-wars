@@ -1,41 +1,41 @@
 import * as THREE from 'three';
 import type { BiomeConfig } from '../types';
 
-// Biome definitions with distinctive 90s-inspired color palettes
+// Biome definitions - BRIGHT colors for visibility
 const BIOMES: BiomeConfig[] = [
   {
     name: 'Desert',
-    groundColor: new THREE.Color(0xc4a35a),  // Sandy tan
-    hillColor: new THREE.Color(0x9b7e4e),    // Darker sand
-    peakColor: new THREE.Color(0x8b6914),    // Rocky brown
+    groundColor: new THREE.Color(0xddcc88),  // Bright sandy tan
+    hillColor: new THREE.Color(0xccbb77),    // Light sand
+    peakColor: new THREE.Color(0xbbaa66),    // Light rocky
     heightScale: 0.7,
   },
   {
     name: 'Tundra',
-    groundColor: new THREE.Color(0x7a9a8c),  // Pale green-gray
-    hillColor: new THREE.Color(0x9ab8c2),    // Ice blue
-    peakColor: new THREE.Color(0xd8e8e8),    // Snow white
+    groundColor: new THREE.Color(0xaabbaa),  // Pale green
+    hillColor: new THREE.Color(0xbbccdd),    // Ice blue
+    peakColor: new THREE.Color(0xeeffff),    // Bright snow
     heightScale: 1.0,
   },
   {
     name: 'Volcanic',
-    groundColor: new THREE.Color(0x2a2a2a),  // Charred black
-    hillColor: new THREE.Color(0x4a3030),    // Dark red-brown
-    peakColor: new THREE.Color(0x8a4040),    // Reddish peaks
+    groundColor: new THREE.Color(0x776666),  // Gray (not black!)
+    hillColor: new THREE.Color(0x886666),    // Reddish gray
+    peakColor: new THREE.Color(0xaa7777),    // Light red
     heightScale: 1.3,
   },
   {
     name: 'Forest',
-    groundColor: new THREE.Color(0x3a5a3a),  // Dark green
-    hillColor: new THREE.Color(0x4a6a3a),    // Forest green
-    peakColor: new THREE.Color(0x6a6a5a),    // Gray rock
+    groundColor: new THREE.Color(0x77aa77),  // Bright green
+    hillColor: new THREE.Color(0x88bb77),    // Light forest green
+    peakColor: new THREE.Color(0xaaaaaa),    // Light gray rock
     heightScale: 0.9,
   },
   {
     name: 'Badlands',
-    groundColor: new THREE.Color(0x8b4513),  // Saddle brown
-    hillColor: new THREE.Color(0xb8602a),    // Orange-brown
-    peakColor: new THREE.Color(0xd2691e),    // Chocolate
+    groundColor: new THREE.Color(0xcc8855),  // Bright orange-brown
+    hillColor: new THREE.Color(0xdd9966),    // Light orange
+    peakColor: new THREE.Color(0xeeaa77),    // Bright tan
     heightScale: 1.1,
   },
 ];
