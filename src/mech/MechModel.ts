@@ -378,8 +378,9 @@ export class MechModel {
   }
   
   setHeadPitch(pitch: number): void {
-    // Clamp pitch to reasonable values
-    this.headGroup.rotation.x = Math.max(-0.4, Math.min(0.3, pitch));
+    // Negate pitch because Three.js rotation.x positive = tilt DOWN, but we want positive pitch = look UP
+    // Clamp to reasonable values (note: limits are swapped due to negation)
+    this.headGroup.rotation.x = Math.max(-0.3, Math.min(0.4, -pitch));
   }
   
   animateWalk(time: number, speed: number): void {

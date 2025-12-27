@@ -160,9 +160,6 @@ export class PhysicsWorld {
     const colliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices);
     
     if (!colliderDesc) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhysicsWorld.ts:addTrimeshCollider',message:'FAILED to create trimesh collider',data:{id,vertexCount:vertices.length/3,indexCount:indices.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       return null;
     }
     
@@ -171,10 +168,6 @@ export class PhysicsWorld {
     
     const collider = this.world.createCollider(colliderDesc, body);
     this.colliders.set(id, collider);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhysicsWorld.ts:addTrimeshCollider',message:'Trimesh collider created',data:{id,vertexCount:vertices.length/3,indexCount:indices.length,colliderHandle:collider.handle},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
     
     return collider;
   }

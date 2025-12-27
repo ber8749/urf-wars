@@ -99,11 +99,6 @@ export class Game {
     // Position mech on top of terrain
     const terrainHeight = this.terrainGenerator.getHeightAt(0, 0);
     const spawnHeight = terrainHeight + 10;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Game.ts:init',message:'Spawn height calculation',data:{terrainHeight,spawnHeight,offset:10},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    
     this.playerMech.setPosition(new THREE.Vector3(0, spawnHeight, 0));
     
     // Handle window resize

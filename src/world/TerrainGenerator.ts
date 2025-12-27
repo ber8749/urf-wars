@@ -94,20 +94,11 @@ export class TerrainGenerator {
     const geometry = chunk.mesh.geometry;
     const posAttr = geometry.getAttribute('position');
     const vertices = new Float32Array(posAttr.count * 3);
-    let minY = Infinity, maxY = -Infinity;
     for (let i = 0; i < posAttr.count; i++) {
       vertices[i * 3] = posAttr.getX(i);
       vertices[i * 3 + 1] = posAttr.getY(i);
       vertices[i * 3 + 2] = posAttr.getZ(i);
-      minY = Math.min(minY, posAttr.getY(i));
-      maxY = Math.max(maxY, posAttr.getY(i));
     }
-    
-    // #region agent log
-    if (chunkX === 0 && chunkZ === 0) {
-      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainGenerator.ts:generateChunk',message:'Chunk 0,0 trimesh vertex Y range',data:{chunkX,chunkZ,minY,maxY,meshPosY:chunk.mesh.position.y,vertexCount:posAttr.count},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-    }
-    // #endregion
     
     // Get or generate indices
     let indices: Uint32Array;
@@ -245,23 +236,10 @@ export class TerrainGenerator {
       height += this.noise(x * 0.004, z * 0.004) * 10;
       height += this.noise(x * 0.015, z * 0.015) * 3;
       height += this.noise(x * 0.05, z * 0.05) * 1;
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainGenerator.ts:getHeightAt',message:'Chunk not found, using fallback',data:{x,z,chunkKey:key,fallbackHeight:height,chunksLoaded:this.chunks.size},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H'})}).catch(()=>{});
-      // #endregion
-      
       return height;
     }
     
-    const chunkHeight = chunk.getHeightAt(x, z);
-    
-    // #region agent log
-    if (x === 0 && z === 0) {
-      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainGenerator.ts:getHeightAt',message:'Chunk found, returning height',data:{x,z,chunkKey:key,chunkHeight},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H'})}).catch(()=>{});
-    }
-    // #endregion
-    
-    return chunkHeight;
+    return chunk.getHeightAt(x, z);
   }
   
   setViewDistance(chunks: number): void {

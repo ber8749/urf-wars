@@ -123,22 +123,10 @@ export class TerrainChunk {
     const fx = localX - x0;
     const fz = localZ - z0;
     
-    // Check bounds
-    const idx00 = z0 * this.size + x0;
-    const idx10 = z0 * this.size + x1;
-    const idx01 = z1 * this.size + x0;
-    const idx11 = z1 * this.size + x1;
-    
-    // #region agent log
-    if (worldX === 0 && worldZ === 0) {
-      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainChunk.ts:getHeightAt',message:'Height lookup details',data:{worldX,worldZ,chunkCoord:this.coord,halfSize,chunkCenterX,chunkCenterZ,localX,localZ,x0,z0,idx00,heightsLength:this.heights.length,h00:this.heights[idx00],validIndex:idx00>=0&&idx00<this.heights.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'I'})}).catch(()=>{});
-    }
-    // #endregion
-    
-    const h00 = this.heights[idx00] || 0;
-    const h10 = this.heights[idx10] || 0;
-    const h01 = this.heights[idx01] || 0;
-    const h11 = this.heights[idx11] || 0;
+    const h00 = this.heights[z0 * this.size + x0] || 0;
+    const h10 = this.heights[z0 * this.size + x1] || 0;
+    const h01 = this.heights[z1 * this.size + x0] || 0;
+    const h11 = this.heights[z1 * this.size + x1] || 0;
     
     const h0 = h00 * (1 - fx) + h10 * fx;
     const h1 = h01 * (1 - fx) + h11 * fx;

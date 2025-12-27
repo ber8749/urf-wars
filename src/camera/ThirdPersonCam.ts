@@ -33,6 +33,7 @@ export class ThirdPersonCam {
     const torsoYaw = this.mech.getTorsoYaw();
     
     // Camera follows torso direction with some lag
+    // NO PI here - the mesh is already flipped, so camera should use raw physics rotation
     const combinedYaw = mechRotation.y + torsoYaw * 0.5;
     
     // Calculate ideal camera position behind the mech
@@ -57,6 +58,7 @@ export class ThirdPersonCam {
     const mechRotation = this.mech.getRotation();
     
     // Calculate look direction based on torso yaw and head pitch
+    // NO PI here - mesh is already flipped
     const combinedYaw = mechRotation.y + torsoYaw;
     
     // Look at a point in front of the mech, adjusted by head pitch

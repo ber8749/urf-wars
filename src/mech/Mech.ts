@@ -91,7 +91,6 @@ export class Mech implements Entity {
     );
     
     // Leg colliders: halfHeight=2.0, radius=1.0, offset Y=-2
-    // Total leg span: body.y - 2 - 2 - 1 to body.y - 2 + 2 + 1
     physicsWorld.addCapsuleCollider(
       this.physicsBody,
       `${id}-legs`,
@@ -99,13 +98,6 @@ export class Mech implements Entity {
       1.0,
       new THREE.Vector3(0, -2, 0)
     );
-    
-    // #region agent log
-    // Capsule math: leg bottom = bodyY - 2 - 2 - 1 = bodyY - 5
-    const legBottom = -2 - 2.0 - 1.0; // offset - halfHeight - radius = -5
-    const torsoTop = 3 + 2.5 + 1.5; // offset + halfHeight + radius = 7
-    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Mech.ts:constructor',message:'Capsule bounds relative to body',data:{legBottomOffset:legBottom,torsoTopOffset:torsoTop,totalHeight:torsoTop-legBottom},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D'})}).catch(()=>{});
-    // #endregion
     
     // Lock rotation on X and Z axes (mech stays upright)
     this.physicsBody.setEnabledRotations(false, true, false, true);
@@ -122,13 +114,13 @@ export class Mech implements Entity {
     
     // Mesh offset: -1 matches torso collider bottom (offset +3 - halfHeight 2.5 - radius 1.5 = -1)
     const meshOffset = -1;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Mech.ts:update',message:'Physics vs Mesh position',data:{physicsY:position.y,meshY:position.y+meshOffset,meshOffset},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
-    
     this.mesh.position.set(position.x, position.y + meshOffset, position.z);
-    this.mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    
+    // Apply physics rotation + 180° flip so mech faces away from camera
+    const physicsEuler = new THREE.Euler().setFromQuaternion(
+      new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w)
+    );
+    this.mesh.rotation.set(0, physicsEuler.y + Math.PI, 0);
     
     // Update torso and head rotation
     this.model.setTorsoRotation(this.torsoYaw);
@@ -284,20 +276,10 @@ export class Mech implements Entity {
   
   // Setters
   setPosition(position: THREE.Vector3): void {
-    // #region agent log
-    const beforePos = this.physicsBody.translation();
-    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Mech.ts:setPosition',message:'Before setTranslation',data:{beforeY:beforePos.y,targetY:position.y},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
-    
     this.physicsBody.setTranslation(
       { x: position.x, y: position.y, z: position.z },
       true
     );
-    
-    // #region agent log
-    const afterPos = this.physicsBody.translation();
-    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Mech.ts:setPosition',message:'After setTranslation',data:{afterY:afterPos.y,targetY:position.y,success:Math.abs(afterPos.y-position.y)<0.1},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
     // Reset velocity when teleporting
     this.physicsBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
   }
@@ -317,9 +299,10 @@ export class Mech implements Entity {
   
   getTorsoWorldRotation(): THREE.Euler {
     const baseRotation = this.getRotation();
+    // Add PI to match the mesh rotation (which is flipped 180°)
     return new THREE.Euler(
       this.headPitch,
-      baseRotation.y + this.torsoYaw,
+      baseRotation.y + this.torsoYaw + Math.PI,
       0
     );
   }

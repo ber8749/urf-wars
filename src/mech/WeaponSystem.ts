@@ -163,9 +163,15 @@ export class WeaponSystem {
     const firingPos = mechModel.getWeaponPosition(slot);
     
     // Get aim direction from torso
+    // Use (0, 0, 1) because getTorsoWorldRotation includes PI rotation for mesh flip
+    // When rotated by PI, (0, 0, 1) becomes (0, 0, -1) which is forward
     const torsoRotation = this.mech.getTorsoWorldRotation();
-    const direction = new THREE.Vector3(0, 0, -1);
+    const direction = new THREE.Vector3(0, 0, 1);
     direction.applyEuler(torsoRotation);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WeaponSystem.ts:fire',message:'Weapon direction calc',data:{torsoRotY:torsoRotation.y,dirX:direction.x,dirY:direction.y,dirZ:direction.z},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'O',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
     
     // Create projectile based on weapon type
     this.createProjectile(weapon, firingPos, direction);
