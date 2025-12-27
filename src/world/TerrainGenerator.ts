@@ -79,29 +79,53 @@ export class TerrainGenerator {
       biome
     );
     
-    // Position chunk mesh at corner (PlaneGeometry is centered by default, but we shift it)
+    // Position chunk mesh (PlaneGeometry is centered by default)
     const halfSize = (this.chunkSize * this.chunkScale) / 2;
     chunk.mesh.position.set(worldX + halfSize, 0, worldZ + halfSize);
     
-    // Add physics collider
-    // Rapier heightfield is centered at body position
+    // Add physics collider using trimesh (more reliable than heightfield)
     const physicsId = `terrain-${key}`;
     const physicsBody = this.physicsWorld.createStaticBody(
       physicsId,
       new THREE.Vector3(worldX + halfSize, 0, worldZ + halfSize)
     );
     
-    this.physicsWorld.addHeightfieldCollider(
+    // Extract geometry data for physics
+    const geometry = chunk.mesh.geometry;
+    const posAttr = geometry.getAttribute('position');
+    const vertices = new Float32Array(posAttr.count * 3);
+    let minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < posAttr.count; i++) {
+      vertices[i * 3] = posAttr.getX(i);
+      vertices[i * 3 + 1] = posAttr.getY(i);
+      vertices[i * 3 + 2] = posAttr.getZ(i);
+      minY = Math.min(minY, posAttr.getY(i));
+      maxY = Math.max(maxY, posAttr.getY(i));
+    }
+    
+    // #region agent log
+    if (chunkX === 0 && chunkZ === 0) {
+      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainGenerator.ts:generateChunk',message:'Chunk 0,0 trimesh vertex Y range',data:{chunkX,chunkZ,minY,maxY,meshPosY:chunk.mesh.position.y,vertexCount:posAttr.count},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+    }
+    // #endregion
+    
+    // Get or generate indices
+    let indices: Uint32Array;
+    if (geometry.index) {
+      indices = new Uint32Array(geometry.index.array);
+    } else {
+      // Generate indices for non-indexed geometry
+      indices = new Uint32Array(posAttr.count);
+      for (let i = 0; i < posAttr.count; i++) {
+        indices[i] = i;
+      }
+    }
+    
+    this.physicsWorld.addTrimeshCollider(
       physicsBody,
       physicsId,
-      heights,
-      this.chunkSize,
-      this.chunkSize,
-      new THREE.Vector3(
-        this.chunkSize * this.chunkScale,
-        1.0,  // Heights are already in world units
-        this.chunkSize * this.chunkScale
-      )
+      vertices,
+      indices
     );
     
     chunk.physicsId = physicsId;
@@ -121,20 +145,20 @@ export class TerrainGenerator {
         const worldX = (chunkX * size + x) * this.chunkScale;
         const worldZ = (chunkZ * size + z) * this.chunkScale;
         
-        // Multi-octave noise for natural terrain
+        // Multi-octave noise for natural terrain (flattened)
         let height = 0;
         
-        // Large scale features (mountains, valleys)
-        height += this.noise(worldX * 0.002, worldZ * 0.002) * 80;
+        // Large scale features (gentle rolling hills)
+        height += this.noise(worldX * 0.001, worldZ * 0.001) * 25;
         
-        // Medium scale (hills)
-        height += this.noise(worldX * 0.008, worldZ * 0.008) * 30;
+        // Medium scale (subtle hills)
+        height += this.noise(worldX * 0.004, worldZ * 0.004) * 10;
         
-        // Small scale (bumps)
-        height += this.noise(worldX * 0.03, worldZ * 0.03) * 8;
+        // Small scale (minor bumps)
+        height += this.noise(worldX * 0.015, worldZ * 0.015) * 3;
         
-        // Fine detail
-        height += this.noise(worldX * 0.1, worldZ * 0.1) * 2;
+        // Fine detail (minimal)
+        height += this.noise(worldX * 0.05, worldZ * 0.05) * 1;
         
         // Apply biome height modifier
         const biome = this.biomeManager.getBiomeAt(worldX, worldZ);
@@ -215,16 +239,29 @@ export class TerrainGenerator {
     const chunk = this.chunks.get(key);
     
     if (!chunk) {
-      // Generate height on the fly if chunk not loaded
+      // Generate height on the fly if chunk not loaded (use same values as generateHeightmap)
       let height = 0;
-      height += this.noise(x * 0.002, z * 0.002) * 80;
-      height += this.noise(x * 0.008, z * 0.008) * 30;
-      height += this.noise(x * 0.03, z * 0.03) * 8;
-      height += this.noise(x * 0.1, z * 0.1) * 2;
+      height += this.noise(x * 0.001, z * 0.001) * 25;
+      height += this.noise(x * 0.004, z * 0.004) * 10;
+      height += this.noise(x * 0.015, z * 0.015) * 3;
+      height += this.noise(x * 0.05, z * 0.05) * 1;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainGenerator.ts:getHeightAt',message:'Chunk not found, using fallback',data:{x,z,chunkKey:key,fallbackHeight:height,chunksLoaded:this.chunks.size},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H'})}).catch(()=>{});
+      // #endregion
+      
       return height;
     }
     
-    return chunk.getHeightAt(x, z);
+    const chunkHeight = chunk.getHeightAt(x, z);
+    
+    // #region agent log
+    if (x === 0 && z === 0) {
+      fetch('http://127.0.0.1:7244/ingest/dcc429e4-22aa-4df5-a72d-c19fdddc0775',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TerrainGenerator.ts:getHeightAt',message:'Chunk found, returning height',data:{x,z,chunkKey:key,chunkHeight},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H'})}).catch(()=>{});
+    }
+    // #endregion
+    
+    return chunkHeight;
   }
   
   setViewDistance(chunks: number): void {
