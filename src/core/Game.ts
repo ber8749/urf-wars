@@ -69,8 +69,13 @@ export class Game {
     this.weaponSystem = new WeaponSystem(this.scene, this.damageSystem);
     this.weaponSystem.setupMechWeapons(this.playerMech);
 
-    // Setup mech controller
-    this.mechController = new MechController(this.playerMech, this.inputManager, this.weaponSystem);
+    // Setup mech controller (pass camera for aim raycasting)
+    this.mechController = new MechController(
+      this.playerMech, 
+      this.inputManager, 
+      this.weaponSystem,
+      this.camera
+    );
 
     // Setup camera controller
     this.cameraController = new CameraController(this.camera, this.playerMech, this.inputManager);

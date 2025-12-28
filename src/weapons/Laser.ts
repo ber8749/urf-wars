@@ -42,10 +42,13 @@ export class Laser extends Weapon {
     }
   }
 
-  fire(position: THREE.Vector3, direction: THREE.Vector3): void {
+  fire(position: THREE.Vector3, aimPoint: THREE.Vector3): void {
     if (!this.canFire()) return;
     
     this.startCooldown();
+
+    // Calculate direction from weapon position toward aim point
+    const direction = aimPoint.clone().sub(position).normalize();
 
     // Raycast for hit detection
     const raycaster = new THREE.Raycaster(position, direction, 0, this.range);

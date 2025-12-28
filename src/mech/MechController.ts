@@ -7,6 +7,8 @@ export class MechController {
   private mech: Mech;
   private input: InputManager;
   private weapons: WeaponSystem;
+  private camera: THREE.PerspectiveCamera;
+  private raycaster: THREE.Raycaster;
 
   // Movement smoothing
   private targetVelocity = new THREE.Vector3();
@@ -16,10 +18,15 @@ export class MechController {
   private readonly legAutoTurnRate = 2.0; // rad/s - how fast legs turn to face movement
   private readonly minSpeedForAutoTurn = 2.0; // m/s - minimum speed to trigger auto-turn
 
-  constructor(mech: Mech, input: InputManager, weapons: WeaponSystem) {
+  // Aim settings
+  private readonly defaultAimDistance = 500; // meters - where to aim if nothing is hit
+
+  constructor(mech: Mech, input: InputManager, weapons: WeaponSystem, camera: THREE.PerspectiveCamera) {
     this.mech = mech;
     this.input = input;
     this.weapons = weapons;
+    this.camera = camera;
+    this.raycaster = new THREE.Raycaster();
   }
 
   update(dt: number): void {
@@ -162,15 +169,49 @@ export class MechController {
   private handleWeapons(_dt: number): void {
     const state = this.input.getState();
 
+    // Calculate aim point once per frame if firing
+    const needsAimPoint = 
+      (state.fire1 && !this.mech.components.isLeftArmDestroyed()) ||
+      (state.fire2 && !this.mech.components.isRightArmDestroyed());
+    
+    let aimPoint: THREE.Vector3 | null = null;
+    if (needsAimPoint) {
+      aimPoint = this.calculateAimPoint();
+    }
+
     // Fire weapon group 1 (left arm - laser) on left click
-    if (state.fire1 && !this.mech.components.isLeftArmDestroyed()) {
-      this.weapons.fireWeaponGroup(1, this.mech);
+    if (state.fire1 && !this.mech.components.isLeftArmDestroyed() && aimPoint) {
+      this.weapons.fireWeaponGroup(1, this.mech, aimPoint);
     }
 
     // Fire weapon group 2 (right arm - autocannon) on right click
-    if (state.fire2 && !this.mech.components.isRightArmDestroyed()) {
-      this.weapons.fireWeaponGroup(2, this.mech);
+    if (state.fire2 && !this.mech.components.isRightArmDestroyed() && aimPoint) {
+      this.weapons.fireWeaponGroup(2, this.mech, aimPoint);
     }
+  }
+
+  /**
+   * Calculate the 3D aim point by raycasting from camera center.
+   * This is where all weapons will converge their fire.
+   */
+  private calculateAimPoint(): THREE.Vector3 {
+    // Raycast from screen center (0,0 in NDC)
+    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+    
+    // Get all objects the weapon system knows about (targets + obstacles)
+    const targets = this.weapons.getAllTargets();
+    
+    if (targets.length > 0) {
+      const hits = this.raycaster.intersectObjects(targets, true);
+      if (hits.length > 0) {
+        return hits[0].point;
+      }
+    }
+    
+    // No hit - aim at a point far along the ray
+    const farPoint = new THREE.Vector3();
+    this.raycaster.ray.at(this.defaultAimDistance, farPoint);
+    return farPoint;
   }
 }
 

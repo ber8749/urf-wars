@@ -44,7 +44,12 @@ export abstract class Weapon {
     return this.currentCooldown <= 0;
   }
 
-  abstract fire(position: THREE.Vector3, direction: THREE.Vector3): void;
+  /**
+   * Fire the weapon from the given position toward the aim point.
+   * @param position - World position of the weapon mount
+   * @param aimPoint - World position to aim at (where crosshair points)
+   */
+  abstract fire(position: THREE.Vector3, aimPoint: THREE.Vector3): void;
 
   protected startCooldown(): void {
     this.currentCooldown = this.cooldown;

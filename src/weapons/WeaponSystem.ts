@@ -77,7 +77,7 @@ export class WeaponSystem {
     }
   }
 
-  fireWeaponGroup(group: number, mech: Mech): void {
+  fireWeaponGroup(group: number, mech: Mech, aimPoint: THREE.Vector3): void {
     const groupWeapons = this.weapons.get(group);
     if (!groupWeapons) return;
 
@@ -92,11 +92,16 @@ export class WeaponSystem {
         position = mech.getRightWeaponPosition();
       }
 
-      // Get aim direction from torso
-      const direction = mech.getAimDirection();
-
-      weapon.fire(position, direction);
+      // Fire toward the aim point (weapons calculate their own direction)
+      weapon.fire(position, aimPoint);
     }
+  }
+
+  /**
+   * Get all objects that can be hit (for aim raycasting)
+   */
+  getAllTargets(): THREE.Object3D[] {
+    return this.targets;
   }
 
   update(dt: number): void {

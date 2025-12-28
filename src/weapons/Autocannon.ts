@@ -41,10 +41,13 @@ export class Autocannon extends Weapon {
     }
   }
 
-  fire(position: THREE.Vector3, direction: THREE.Vector3): void {
+  fire(position: THREE.Vector3, aimPoint: THREE.Vector3): void {
     if (!this.canFire()) return;
     
     this.startCooldown();
+    
+    // Calculate direction from weapon position toward aim point
+    const direction = aimPoint.clone().sub(position).normalize();
     
     // Create muzzle flash
     this.createMuzzleFlash(position);
@@ -53,7 +56,7 @@ export class Autocannon extends Weapon {
     const projectile = new Projectile(
       this.scene,
       position.clone(),
-      direction.clone(),
+      direction,
       this.projectileSpeed,
       this.damage,
       this.projectileLifetime,
