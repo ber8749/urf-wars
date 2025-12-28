@@ -30,7 +30,7 @@ export class Mech {
   public readonly acceleration = 40; // m/s²
   public readonly turnRate = 1.5; // rad/s for legs
   public readonly torsoTwistRate = 2.5; // rad/s
-  public readonly torsoTwistLimit = Math.PI / 2; // 90 degrees
+  public readonly torsoTwistLimit = Math.PI * 2; // Full 360 degrees
   public readonly torsoPitchLimit = Math.PI / 6; // 30 degrees
 
   private isPlayer: boolean;

@@ -93,9 +93,10 @@ export class CameraController {
 
   private updateThirdPersonTarget(): void {
     // Calculate camera position behind and above the mech
-    // Camera follows leg rotation, not torso
+    // Camera follows torso direction (legs + torso twist)
+    const torsoWorldRotation = this.mech.legRotation + this.mech.torsoTwist;
     const offset = new THREE.Vector3(0, this.thirdPersonHeight, this.thirdPersonDistance);
-    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mech.legRotation);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), torsoWorldRotation);
     
     this.targetPosition.copy(this.mech.mesh.position).add(offset);
   }

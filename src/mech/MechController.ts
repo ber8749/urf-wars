@@ -90,30 +90,13 @@ export class MechController {
     // Mouse sensitivity
     const sensitivity = 0.002;
 
-    // Horizontal aiming (torso twist)
+    // Horizontal aiming (torso twist) - full 360 degree rotation
     const twistDelta = -state.mouseDeltaX * sensitivity;
-    let newTwist = this.mech.torsoTwist + twistDelta;
+    this.mech.torsoTwist += twistDelta;
 
-    // Clamp torso twist to limits
-    newTwist = THREE.MathUtils.clamp(
-      newTwist,
-      -this.mech.torsoTwistLimit,
-      this.mech.torsoTwistLimit
-    );
-
-    // If at twist limit, rotate legs to follow
-    if (Math.abs(newTwist) >= this.mech.torsoTwistLimit * 0.95) {
-      const overflow = twistDelta * 0.5;
-      this.mech.legRotation += overflow;
-      // Reduce twist slightly to stay within limits
-      newTwist = THREE.MathUtils.clamp(
-        newTwist,
-        -this.mech.torsoTwistLimit * 0.95,
-        this.mech.torsoTwistLimit * 0.95
-      );
-    }
-
-    this.mech.torsoTwist = newTwist;
+    // Normalize angle to -PI to PI range to prevent floating point issues
+    while (this.mech.torsoTwist > Math.PI) this.mech.torsoTwist -= Math.PI * 2;
+    while (this.mech.torsoTwist < -Math.PI) this.mech.torsoTwist += Math.PI * 2;
 
     // Vertical aiming (torso pitch)
     const pitchDelta = -state.mouseDeltaY * sensitivity;
