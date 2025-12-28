@@ -176,11 +176,23 @@ export class MovementSystem extends System {
   }
 
   private handleFiring(entity: Entity, input: InputSnapshot): void {
-    // Fire on left click
-    if (!input.fire) return;
-
+    const inputComp = entity.getComponent(InputComponent);
     const weapons = entity.getComponent(WeaponComponent);
-    if (!weapons) return;
+    if (!weapons || !inputComp) return;
+
+    const selectedWeapon = weapons.getSelectedWeapon();
+    const isSemiAuto = selectedWeapon?.config.semiAuto ?? false;
+
+    // For semi-auto weapons, only fire on initial press (not hold)
+    if (isSemiAuto) {
+      const justPressed = input.fire && !inputComp.wasFiring;
+      inputComp.wasFiring = input.fire;
+      if (!justPressed) return;
+    } else {
+      // For automatic weapons, fire while held
+      inputComp.wasFiring = input.fire;
+      if (!input.fire) return;
+    }
 
     // Emit event for WeaponSystem to handle actual firing
     EventBus.emit('weapon:fire_request', entity.id, weapons.selectedSlot);

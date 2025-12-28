@@ -262,9 +262,24 @@ export class HUD {
           opacity: 0.5;
         }
         
+        .weapon-slot.empty {
+          opacity: 0.4;
+          border-color: #ff4400;
+        }
+        
         .weapon-name {
           text-transform: uppercase;
           letter-spacing: 1px;
+        }
+        
+        .weapon-ammo {
+          color: #88ffaa;
+          font-size: 11px;
+          margin-left: 4px;
+        }
+        
+        .weapon-ammo.empty {
+          color: #ff4400;
         }
         
         .weapon-status {
@@ -456,21 +471,34 @@ export class HUD {
     for (const weapon of weapons) {
       const isSelected = weapon.slot === selectedSlot;
       const isOnCooldown = weapon.cooldownRemaining > 0;
+      const hasAmmo = weapon.ammo !== undefined;
+      const isEmpty = hasAmmo && weapon.ammo! <= 0;
 
-      let statusText = 'RDY';
-      if (isOnCooldown) {
-        statusText = weapon.cooldownRemaining.toFixed(1);
-      } else if (weapon.ammo !== undefined && weapon.ammo <= 0) {
+      // Determine status text - ammo weapons don't show RDY
+      let statusText = '';
+      if (isEmpty) {
         statusText = 'EMPTY';
+      } else if (isOnCooldown) {
+        statusText = weapon.cooldownRemaining.toFixed(1);
+      } else if (!hasAmmo) {
+        // Only show RDY for energy weapons (no ammo)
+        statusText = 'RDY';
       }
+
+      // Build ammo display for finite-ammo weapons
+      const ammoDisplay = hasAmmo
+        ? `<span class="weapon-ammo${isEmpty ? ' empty' : ''}">[${weapon.ammo}]</span>`
+        : '';
 
       const classes = ['weapon-slot'];
       if (isSelected) classes.push('selected');
       if (isOnCooldown) classes.push('cooldown');
+      if (isEmpty) classes.push('empty');
 
       html += `
         <div class="${classes.join(' ')}">
-          <span class="weapon-name">${weapon.slot}: ${weapon.config.type}</span>
+          <span class="weapon-name">${weapon.slot}: ${weapon.config.type.toUpperCase()}</span>
+          ${ammoDisplay}
           <span class="weapon-status">${statusText}</span>
         </div>
       `;

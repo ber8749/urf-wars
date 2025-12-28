@@ -25,20 +25,21 @@ export const WEAPON_CONFIGS: Record<WeaponType, WeaponConfig> = {
   missile: {
     type: 'missile',
     damage: 8,
-    heatGenerated: 4,
-    cooldown: 1.5,
+    heatGenerated: 0,
+    cooldown: 0,
     projectileSpeed: 100,
     range: 600,
-    ammo: 120,
+    ammo: 16,
+    semiAuto: true,
   },
   autocannon: {
     type: 'autocannon',
     damage: 20,
-    heatGenerated: 3,
-    cooldown: 0.3,
+    heatGenerated: 0,
+    cooldown: 0.1,
     projectileSpeed: 400,
     range: 350,
-    ammo: 200,
+    ammo: 500,
   },
 };
 

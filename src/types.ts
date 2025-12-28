@@ -95,6 +95,8 @@ export interface WeaponConfig {
   projectileSpeed: number;
   range: number;
   ammo?: number;
+  /** If true, weapon only fires once per button press (not continuous) */
+  semiAuto?: boolean;
 }
 
 // Terrain types

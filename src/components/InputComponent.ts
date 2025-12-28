@@ -15,6 +15,9 @@ export class InputComponent implements Component {
   /** Last captured input snapshot */
   lastInput: InputSnapshot | null = null;
 
+  /** Previous frame's fire state (for semi-auto weapons) */
+  wasFiring: boolean = false;
+
   constructor(isLocalPlayer: boolean = true) {
     this.isLocalPlayer = isLocalPlayer;
   }
