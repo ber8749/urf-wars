@@ -36,11 +36,12 @@ export interface Entity {
 // Input types
 export interface InputSnapshot {
   timestamp: number;
-  // Movement (WASD)
+  // Movement (W/S)
   forward: boolean;
   backward: boolean;
-  strafeLeft: boolean;
-  strafeRight: boolean;
+  // Turning (A/D)
+  turnLeft: boolean;
+  turnRight: boolean;
   // Torso/Head control (Arrow keys)
   torsoLeft: boolean;
   torsoRight: boolean;

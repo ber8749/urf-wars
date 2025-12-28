@@ -23,11 +23,12 @@ export class InputManager {
   private createEmptySnapshot(): InputSnapshot {
     return {
       timestamp: performance.now(),
-      // Movement (WASD)
+      // Movement (W/S)
       forward: false,
       backward: false,
-      strafeLeft: false,
-      strafeRight: false,
+      // Turning (A/D)
+      turnLeft: false,
+      turnRight: false,
       // Torso/Head control (Arrow keys)
       torsoLeft: false,
       torsoRight: false,
@@ -148,11 +149,12 @@ export class InputManager {
   update(): void {
     this.currentSnapshot = {
       timestamp: performance.now(),
-      // Movement: WASD
+      // Movement: W/S
       forward: this.keys.get('KeyW') || false,
       backward: this.keys.get('KeyS') || false,
-      strafeLeft: this.keys.get('KeyA') || false,
-      strafeRight: this.keys.get('KeyD') || false,
+      // Turning: A/D
+      turnLeft: this.keys.get('KeyA') || false,
+      turnRight: this.keys.get('KeyD') || false,
       // Torso/Head: Arrow keys
       torsoLeft: this.keys.get('ArrowLeft') || false,
       torsoRight: this.keys.get('ArrowRight') || false,

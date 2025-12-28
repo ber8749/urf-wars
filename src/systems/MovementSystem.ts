@@ -123,8 +123,8 @@ export class MovementSystem extends System {
     dt: number
   ): void {
     let turnDelta = 0;
-    if (input.strafeLeft) turnDelta -= this.turnSpeed * dt;
-    if (input.strafeRight) turnDelta += this.turnSpeed * dt;
+    if (input.turnLeft) turnDelta -= this.turnSpeed * dt;
+    if (input.turnRight) turnDelta += this.turnSpeed * dt;
 
     if (turnDelta === 0) return;
 
