@@ -172,8 +172,8 @@ export class CameraSystem extends System {
   ): THREE.Vector3 {
     const mechPos = transform.position.clone();
 
-    // Camera follows torso direction with some lag
-    const combinedYaw = transform.rotation.y + mech.torsoYaw * 0.5;
+    // Camera locked directly behind torso
+    const combinedYaw = transform.rotation.y + mech.torsoYaw;
 
     // Calculate ideal camera position behind the mech
     const idealOffset = new THREE.Vector3(

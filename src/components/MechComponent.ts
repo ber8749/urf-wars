@@ -32,12 +32,10 @@ export class MechComponent implements Component {
    * Rotate the torso by a delta amount
    */
   rotateTorso(yawDelta: number, pitchDelta: number): void {
-    // Clamp torso yaw to ±90 degrees
+    // Allow full 360-degree torso rotation, normalize to -π to π
     this.torsoYaw += yawDelta * this.config.torsoTurnRate;
-    this.torsoYaw = Math.max(
-      -Math.PI / 2,
-      Math.min(Math.PI / 2, this.torsoYaw)
-    );
+    while (this.torsoYaw > Math.PI) this.torsoYaw -= Math.PI * 2;
+    while (this.torsoYaw < -Math.PI) this.torsoYaw += Math.PI * 2;
 
     // Clamp head pitch
     this.headPitch += pitchDelta;
