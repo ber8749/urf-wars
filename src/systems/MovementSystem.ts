@@ -6,6 +6,7 @@ import { MechComponent } from '../components/MechComponent';
 import { PhysicsComponent } from '../components/PhysicsComponent';
 import { TransformComponent } from '../components/TransformComponent';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
+import { PHYSICS_CONFIG } from '../config/PhysicsConfig';
 
 /**
  * Movement system handles mech locomotion with tank controls.
@@ -23,12 +24,6 @@ export class MovementSystem extends System {
   ];
 
   private physicsWorld: PhysicsWorld;
-
-  // Movement tuning
-  private readonly groundAcceleration = 8.0;
-  private readonly groundDeceleration = 12.0;
-  private readonly airAcceleration = 2.0;
-  private readonly airDeceleration = 1.0;
 
   constructor(physicsWorld: PhysicsWorld) {
     super();
@@ -135,14 +130,18 @@ export class MovementSystem extends System {
       facingDir.z * targetSpeed
     );
 
-    // Choose acceleration based on grounded state and input
+    // Choose acceleration based on grounded state and input (using centralized config)
     let acceleration: number;
     if (physics.isGrounded) {
       acceleration =
-        forwardInput !== 0 ? this.groundAcceleration : this.groundDeceleration;
+        forwardInput !== 0
+          ? PHYSICS_CONFIG.GROUND_ACCELERATION
+          : PHYSICS_CONFIG.GROUND_DECELERATION;
     } else {
       acceleration =
-        forwardInput !== 0 ? this.airAcceleration : this.airDeceleration;
+        forwardInput !== 0
+          ? PHYSICS_CONFIG.AIR_ACCELERATION
+          : PHYSICS_CONFIG.AIR_DECELERATION;
     }
 
     // Lerp toward target velocity

@@ -2,6 +2,7 @@ import { System } from '../core/System';
 import type { ComponentClass } from '../core/Component';
 import { InputComponent } from '../components/InputComponent';
 import { MechComponent } from '../components/MechComponent';
+import { CONTROLS_CONFIG } from '../config/ControlsConfig';
 
 /**
  * TorsoControlSystem handles independent torso and head rotation.
@@ -15,11 +16,6 @@ export class TorsoControlSystem extends System {
     MechComponent,
   ];
 
-  // Control settings
-  private readonly mouseSensitivity = 0.002;
-  private readonly keyboardTorsoSpeed = 1.5;
-  private readonly keyboardPitchSpeed = 1.0;
-
   update(dt: number): void {
     for (const entity of this.getEntities()) {
       const input = entity.getComponent(InputComponent)!;
@@ -29,20 +25,26 @@ export class TorsoControlSystem extends System {
 
       const snapshot = input.lastInput;
 
-      // Calculate torso yaw delta from keyboard
+      // Calculate torso yaw delta from keyboard (using centralized config)
       let torsoYawDelta = 0;
-      if (snapshot.torsoLeft) torsoYawDelta += this.keyboardTorsoSpeed * dt;
-      if (snapshot.torsoRight) torsoYawDelta -= this.keyboardTorsoSpeed * dt;
+      if (snapshot.torsoLeft)
+        torsoYawDelta += CONTROLS_CONFIG.KEYBOARD_TORSO_SPEED * dt;
+      if (snapshot.torsoRight)
+        torsoYawDelta -= CONTROLS_CONFIG.KEYBOARD_TORSO_SPEED * dt;
 
       // Calculate head pitch delta from keyboard
       let headPitchDelta = 0;
-      if (snapshot.lookUp) headPitchDelta += this.keyboardPitchSpeed * dt;
-      if (snapshot.lookDown) headPitchDelta -= this.keyboardPitchSpeed * dt;
+      if (snapshot.lookUp)
+        headPitchDelta += CONTROLS_CONFIG.KEYBOARD_PITCH_SPEED * dt;
+      if (snapshot.lookDown)
+        headPitchDelta -= CONTROLS_CONFIG.KEYBOARD_PITCH_SPEED * dt;
 
       // Add mouse input
       if (snapshot.mouseDeltaX !== 0 || snapshot.mouseDeltaY !== 0) {
-        torsoYawDelta += -snapshot.mouseDeltaX * this.mouseSensitivity;
-        headPitchDelta += -snapshot.mouseDeltaY * this.mouseSensitivity;
+        torsoYawDelta +=
+          -snapshot.mouseDeltaX * CONTROLS_CONFIG.MOUSE_SENSITIVITY;
+        headPitchDelta +=
+          -snapshot.mouseDeltaY * CONTROLS_CONFIG.MOUSE_SENSITIVITY;
       }
 
       // Apply rotation via MechComponent (which handles clamping)

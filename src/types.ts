@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 // Core types used throughout the game
 
 export interface Vector3Like {
@@ -22,15 +20,6 @@ export interface SerializableState {
   rotation: EulerLike;
   velocity: Vector3Like;
   [key: string]: unknown;
-}
-
-export interface Entity {
-  id: string;
-  type: EntityType;
-  mesh: THREE.Object3D | null;
-
-  update(dt: number): void;
-  dispose(): void;
 }
 
 // Input types

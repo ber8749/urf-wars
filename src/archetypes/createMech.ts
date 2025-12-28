@@ -11,6 +11,7 @@ import { InputComponent } from '../components/InputComponent';
 import { MechModel } from '../rendering/MechModel';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { MechConfig } from '../types';
+import { MECH_CONSTANTS } from '../config/MechConfigs';
 
 /**
  * Create a mech entity with all required components.
@@ -32,23 +33,25 @@ export function createMech(
     config.mass
   );
 
-  // Add collision shapes
-  // Main body capsule: halfHeight=2.5, radius=1.5, offset Y=3
+  // Add collision shapes using centralized constants
+  const { torso, legs } = MECH_CONSTANTS.COLLISION;
+
+  // Main body capsule
   physicsWorld.addCapsuleCollider(
     body,
     `${id}-torso`,
-    2.5,
-    1.5,
-    new THREE.Vector3(0, 3, 0)
+    torso.halfHeight,
+    torso.radius,
+    new THREE.Vector3(0, torso.offsetY, 0)
   );
 
-  // Leg colliders: halfHeight=2.0, radius=1.0, offset Y=-2
+  // Leg colliders
   physicsWorld.addCapsuleCollider(
     body,
     `${id}-legs`,
-    2.0,
-    1.0,
-    new THREE.Vector3(0, -2, 0)
+    legs.halfHeight,
+    legs.radius,
+    new THREE.Vector3(0, legs.offsetY, 0)
   );
 
   // Lock rotation on X and Z axes (mech stays upright)
@@ -63,12 +66,12 @@ export function createMech(
   // PhysicsComponent only holds runtime state - config comes from MechComponent
   const physicsComp = new PhysicsComponent(bodyId);
 
-  // Mesh offset: -1 matches torso collider bottom
-  // Pass the model instance for animation methods
+  // Mesh offset and rotation from centralized constants
+  const { positionOffset, rotationOffset } = MECH_CONSTANTS.MESH;
   const renderComp = new RenderComponent(
     model.mesh,
-    new THREE.Vector3(0, -1, 0),
-    new THREE.Euler(0, Math.PI, 0), // 180° rotation for mesh facing
+    new THREE.Vector3(positionOffset.x, positionOffset.y, positionOffset.z),
+    new THREE.Euler(rotationOffset.x, rotationOffset.y, rotationOffset.z),
     model // Pass MechModel for animation access
   );
 

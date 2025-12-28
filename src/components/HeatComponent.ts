@@ -1,4 +1,5 @@
 import type { Component } from '../core/Component';
+import { HEAT_CONFIG } from '../config/HeatConfig';
 
 /**
  * Heat component for entities with heat management.
@@ -19,10 +20,10 @@ export class HeatComponent implements Component {
   /** Whether the entity is in overheat state */
   isOverheated: boolean = false;
 
-  /** Heat level at which warning triggers (percentage of max) */
+  /** Heat level at which warning triggers (uses centralized HEAT_CONFIG) */
   warningThreshold: number;
 
-  /** Heat level at which shutdown triggers (percentage of max) */
+  /** Heat level at which shutdown triggers (uses centralized HEAT_CONFIG) */
   shutdownThreshold: number;
 
   /** Track if warning was already triggered this frame */
@@ -31,8 +32,9 @@ export class HeatComponent implements Component {
   constructor(max: number, dissipationRate: number) {
     this.max = max;
     this.dissipationRate = dissipationRate;
-    this.warningThreshold = max * 0.7;
-    this.shutdownThreshold = max * 0.95;
+    // Use centralized heat thresholds
+    this.warningThreshold = max * HEAT_CONFIG.WARNING_THRESHOLD;
+    this.shutdownThreshold = max * HEAT_CONFIG.SHUTDOWN_THRESHOLD;
   }
 
   /**

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { MECH_CONSTANTS } from '../config/MechConfigs';
+import { ANIMATION_CONFIG } from '../config/AnimationConfig';
 
 // Procedurally generated mech geometry in a retro low-poly style
 // Inspired by MechWarrior 2 and Earth Siege aesthetics
@@ -407,8 +409,11 @@ export class MechModel {
 
   setHeadPitch(pitch: number): void {
     // Negate pitch because Three.js rotation.x positive = tilt DOWN, but we want positive pitch = look UP
-    // Clamp to reasonable values (note: limits are swapped due to negation)
-    const clampedPitch = Math.max(-0.3, Math.min(0.4, -pitch));
+    // Clamp using centralized constants (note: limits are swapped due to negation)
+    const clampedPitch = Math.max(
+      -MECH_CONSTANTS.HEAD_PITCH.max,
+      Math.min(-MECH_CONSTANTS.HEAD_PITCH.min, -pitch)
+    );
     this.headGroup.rotation.x = clampedPitch;
 
     // Store arm pitch for aiming (walk animation will add to this)
@@ -416,42 +421,51 @@ export class MechModel {
   }
 
   animateWalk(time: number, speed: number): void {
+    const { WALK, TORSO_BASE_Y } = ANIMATION_CONFIG;
+
     // Clamp speed to valid range and use sqrt for more natural animation scaling
-    const clampedSpeed = Math.max(0, Math.min(speed, 1.5));
+    const clampedSpeed = Math.max(
+      0,
+      Math.min(speed, WALK.maxSpeedForAnimation)
+    );
 
     // Animation rate increases with speed, but use sqrt for smoother scaling at high speeds
-    // Base rate of 8 gives good leg turnover, sqrt(speed) prevents it from getting too fast
-    const animationRate = 8 * Math.sqrt(clampedSpeed);
+    const animationRate = WALK.rateMultiplier * Math.sqrt(clampedSpeed);
     const walkCycle = time * animationRate;
 
     // Leg swing amplitude scales with speed but caps at reasonable maximum
-    const legSwingAmplitude = 0.35 * Math.min(clampedSpeed, 1);
+    const legSwingAmplitude =
+      WALK.legSwingAmplitude * Math.min(clampedSpeed, 1);
     const legSwing = Math.sin(walkCycle) * legSwingAmplitude;
 
     // Body bob - double frequency, scaled to speed
     const bobAmount =
-      Math.abs(Math.sin(walkCycle * 2)) * 0.08 * Math.min(clampedSpeed, 1);
+      Math.abs(Math.sin(walkCycle * 2)) *
+      WALK.bodyBobAmplitude *
+      Math.min(clampedSpeed, 1);
 
     // Leg swing
     this.leftLegGroup.rotation.x = legSwing;
     this.rightLegGroup.rotation.x = -legSwing;
 
     // Body bob
-    this.torsoGroup.position.y = 5.5 + bobAmount;
+    this.torsoGroup.position.y = TORSO_BASE_Y + bobAmount;
 
     // Slight torso sway
     this.torsoGroup.rotation.z =
-      Math.sin(walkCycle) * 0.015 * Math.min(clampedSpeed, 1);
+      Math.sin(walkCycle) * WALK.torsoSwayAmplitude * Math.min(clampedSpeed, 1);
 
     // Arm pitch (from aiming) + walk counter-swing
-    this.leftArmGroup.rotation.x = this.armPitch + -legSwing * 0.4;
-    this.rightArmGroup.rotation.x = this.armPitch + legSwing * 0.4;
+    this.leftArmGroup.rotation.x =
+      this.armPitch + -legSwing * WALK.armCounterSwing;
+    this.rightArmGroup.rotation.x =
+      this.armPitch + legSwing * WALK.armCounterSwing;
   }
 
   resetPose(): void {
     this.leftLegGroup.rotation.x = 0;
     this.rightLegGroup.rotation.x = 0;
-    this.torsoGroup.position.y = 5.5;
+    this.torsoGroup.position.y = ANIMATION_CONFIG.TORSO_BASE_Y;
     this.torsoGroup.rotation.z = 0;
     this.leftArmGroup.rotation.x = this.armPitch;
     this.rightArmGroup.rotation.x = this.armPitch;

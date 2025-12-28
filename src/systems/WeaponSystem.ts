@@ -11,6 +11,20 @@ import { ProjectileComponent } from '../components/ProjectileComponent';
 import { EventBus } from '../core/EventBus';
 import type { MechModel } from '../rendering/MechModel';
 import type { Weapon } from '../components/WeaponComponent';
+import {
+  createAutocannonMaterial,
+  createPPCCoreMaterial,
+  createPPCSparkleMaterial,
+  createMissileMaterial,
+  createFlameMaterial,
+  createLaserBeamMaterial,
+  createLaserBeamCoreMaterial,
+  createMuzzleFlashMaterial,
+  createAutocannonMesh,
+  createPPCMesh,
+  createMissileMesh,
+  PROJECTILE_VISUALS,
+} from '../config/ProjectileVisuals';
 
 /**
  * Weapon system handles weapon cooldowns and firing.
@@ -68,57 +82,15 @@ export class WeaponSystem extends System {
   }
 
   private createMaterials(): void {
-    this.autocannonMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.9,
-    });
-
-    this.ppcCoreMaterial = new THREE.MeshBasicMaterial({
-      color: 0x00aaff,
-      transparent: true,
-      opacity: 0.9,
-    });
-
-    this.ppcSparkleMaterial = new THREE.PointsMaterial({
-      color: 0x88ffff,
-      size: 0.15,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
-    });
-
-    this.missileMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-    });
-
-    this.flameMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff6600,
-      transparent: true,
-      opacity: 0.9,
-      blending: THREE.AdditiveBlending,
-    });
-
-    this.laserBeamMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
-    });
-
-    this.laserBeamCoreMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffcccc,
-      transparent: true,
-      opacity: 0.9,
-      blending: THREE.AdditiveBlending,
-    });
-
-    this.muzzleFlashMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffaa00,
-      transparent: true,
-      opacity: 1.0,
-      blending: THREE.AdditiveBlending,
-    });
+    // Use centralized material factory functions from ProjectileVisuals
+    this.autocannonMaterial = createAutocannonMaterial();
+    this.ppcCoreMaterial = createPPCCoreMaterial();
+    this.ppcSparkleMaterial = createPPCSparkleMaterial();
+    this.missileMaterial = createMissileMaterial();
+    this.flameMaterial = createFlameMaterial();
+    this.laserBeamMaterial = createLaserBeamMaterial();
+    this.laserBeamCoreMaterial = createLaserBeamCoreMaterial();
+    this.muzzleFlashMaterial = createMuzzleFlashMaterial();
   }
 
   update(dt: number): void {
@@ -257,9 +229,15 @@ export class WeaponSystem extends System {
     direction: THREE.Vector3
   ): void {
     const beamLength = weapon.config.range;
+    const { outerRadius, innerRadius, lifetime } = PROJECTILE_VISUALS.LASER;
 
     // Outer beam - red glow
-    const outerGeometry = new THREE.CylinderGeometry(0.1, 0.1, beamLength, 6);
+    const outerGeometry = new THREE.CylinderGeometry(
+      outerRadius,
+      outerRadius,
+      beamLength,
+      6
+    );
     outerGeometry.translate(0, beamLength / 2, 0);
     outerGeometry.rotateX(Math.PI / 2);
 
@@ -269,7 +247,12 @@ export class WeaponSystem extends System {
     outerMesh.lookAt(position.clone().add(direction));
 
     // Inner core
-    const innerGeometry = new THREE.CylinderGeometry(0.04, 0.04, beamLength, 6);
+    const innerGeometry = new THREE.CylinderGeometry(
+      innerRadius,
+      innerRadius,
+      beamLength,
+      6
+    );
     innerGeometry.translate(0, beamLength / 2, 0);
     innerGeometry.rotateX(Math.PI / 2);
 
@@ -284,8 +267,8 @@ export class WeaponSystem extends System {
     this.laserBeams.push({
       outerMesh,
       innerMesh,
-      lifetime: 0.15,
-      maxLifetime: 0.15,
+      lifetime,
+      maxLifetime: lifetime,
     });
 
     // Create muzzle flash
@@ -293,7 +276,10 @@ export class WeaponSystem extends System {
   }
 
   private createLaserMuzzleFlash(position: THREE.Vector3): void {
-    const coreGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+    const { coreRadius, glowRadius, lifetime } =
+      PROJECTILE_VISUALS.MUZZLE_FLASH.laser;
+
+    const coreGeometry = new THREE.SphereGeometry(coreRadius, 8, 8);
     const coreMaterial = new THREE.MeshBasicMaterial({
       color: 0xff6644,
       transparent: true,
@@ -302,7 +288,7 @@ export class WeaponSystem extends System {
     });
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
 
-    const glowGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+    const glowGeometry = new THREE.SphereGeometry(glowRadius, 8, 8);
     const glowMaterial = new THREE.MeshBasicMaterial({
       color: 0xff2200,
       transparent: true,
@@ -317,8 +303,8 @@ export class WeaponSystem extends System {
 
     this.muzzleFlashes.push({
       mesh: glow,
-      lifetime: 0.08,
-      maxLifetime: 0.08,
+      lifetime,
+      maxLifetime: lifetime,
     });
   }
 
@@ -332,15 +318,15 @@ export class WeaponSystem extends System {
 
     switch (weapon.config.type) {
       case 'autocannon':
-        mesh = this.createAutocannonMesh();
+        mesh = this.createAutocannonMeshLocal();
         this.createMuzzleFlash(position);
         break;
       case 'ppc':
-        mesh = this.createPPCMesh();
+        mesh = this.createPPCMeshLocal();
         this.createPPCMuzzleFlash(position);
         break;
       case 'missile':
-        mesh = this.createMissileMesh();
+        mesh = this.createMissileMeshLocal();
         break;
       default:
         return;
@@ -379,89 +365,29 @@ export class WeaponSystem extends System {
     this.world.addEntity(projectileEntity);
   }
 
-  private createAutocannonMesh(): THREE.Mesh {
-    const geometry = new THREE.CylinderGeometry(0.12, 0.12, 5, 6);
-    geometry.rotateX(-Math.PI / 2); // Point along -Z for lookAt compatibility
-    return new THREE.Mesh(geometry, this.autocannonMaterial);
+  // Use shared mesh factory functions from ProjectileVisuals
+  private createAutocannonMeshLocal(): THREE.Mesh {
+    return createAutocannonMesh(this.autocannonMaterial);
   }
 
-  private createPPCMesh(): THREE.Group {
-    const group = new THREE.Group();
-
-    // Core sphere
-    const coreGeometry = new THREE.SphereGeometry(0.25, 8, 8);
-    const core = new THREE.Mesh(coreGeometry, this.ppcCoreMaterial);
-    group.add(core);
-
-    // Outer glow
-    const glowGeometry = new THREE.SphereGeometry(0.4, 8, 8);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x0066ff,
-      transparent: true,
-      opacity: 0.3,
-      blending: THREE.AdditiveBlending,
-    });
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    group.add(glow);
-
-    // Sparkles
-    const sparkleCount = 20;
-    const sparklePositions = new Float32Array(sparkleCount * 3);
-    for (let i = 0; i < sparkleCount; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const radius = 0.3 + Math.random() * 0.2;
-      sparklePositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-      sparklePositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-      sparklePositions[i * 3 + 2] = radius * Math.cos(phi);
-    }
-    const sparkleGeometry = new THREE.BufferGeometry();
-    sparkleGeometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(sparklePositions, 3)
-    );
-    const sparkles = new THREE.Points(sparkleGeometry, this.ppcSparkleMaterial);
-    group.add(sparkles);
-
-    return group;
+  private createPPCMeshLocal(): THREE.Group {
+    return createPPCMesh(this.ppcCoreMaterial, this.ppcSparkleMaterial);
   }
 
-  private createMissileMesh(): THREE.Group {
-    const group = new THREE.Group();
-
-    // Body - solid filled cone pointing along -Z for lookAt compatibility
-    const bodyGeometry = new THREE.ConeGeometry(0.25, 1.5, 8);
-    bodyGeometry.rotateX(-Math.PI / 2); // Tip points along -Z
-    bodyGeometry.translate(0, 0, -0.4);
-    const body = new THREE.Mesh(bodyGeometry, this.missileMaterial);
-    group.add(body);
-
-    // Red base cap at the back of the cone
-    const baseGeometry = new THREE.CircleGeometry(0.25, 8);
-    baseGeometry.rotateX(Math.PI / 2); // Face backwards (+Z)
-    baseGeometry.translate(0, 0, 0.35); // Position at cone base
-    const baseMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const base = new THREE.Mesh(baseGeometry, baseMaterial);
-    group.add(base);
-
-    // Flame - at the back (positive Z now)
-    const flameGeometry = new THREE.ConeGeometry(0.2, 0.8, 6);
-    flameGeometry.rotateX(Math.PI / 2); // Flame points backwards (+Z)
-    flameGeometry.translate(0, 0, 0.6);
-    const flame = new THREE.Mesh(flameGeometry, this.flameMaterial.clone());
-    flame.name = 'flame';
-    group.add(flame);
-
-    return group;
+  private createMissileMeshLocal(): THREE.Group {
+    return createMissileMesh(this.missileMaterial, this.flameMaterial);
   }
 
   private createMuzzleFlash(position: THREE.Vector3): void {
-    const coreGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+    const { coreRadius, glowRadius, lifetime } =
+      PROJECTILE_VISUALS.MUZZLE_FLASH.autocannon;
+
+    const coreGeometry = new THREE.SphereGeometry(coreRadius, 8, 8);
     const coreMaterial = this.muzzleFlashMaterial.clone();
     coreMaterial.color.setHex(0xffffcc);
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
 
-    const glowGeometry = new THREE.SphereGeometry(0.6, 8, 8);
+    const glowGeometry = new THREE.SphereGeometry(glowRadius, 8, 8);
     const glowMaterial = this.muzzleFlashMaterial.clone();
     glowMaterial.opacity = 0.6;
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -473,13 +399,16 @@ export class WeaponSystem extends System {
 
     this.muzzleFlashes.push({
       mesh: glow,
-      lifetime: 0.06,
-      maxLifetime: 0.06,
+      lifetime,
+      maxLifetime: lifetime,
     });
   }
 
   private createPPCMuzzleFlash(position: THREE.Vector3): void {
-    const coreGeometry = new THREE.SphereGeometry(0.4, 8, 8);
+    const { coreRadius, glowRadius, lifetime } =
+      PROJECTILE_VISUALS.MUZZLE_FLASH.ppc;
+
+    const coreGeometry = new THREE.SphereGeometry(coreRadius, 8, 8);
     const coreMaterial = new THREE.MeshBasicMaterial({
       color: 0xaaffff,
       transparent: true,
@@ -488,7 +417,7 @@ export class WeaponSystem extends System {
     });
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
 
-    const glowGeometry = new THREE.SphereGeometry(0.8, 8, 8);
+    const glowGeometry = new THREE.SphereGeometry(glowRadius, 8, 8);
     const glowMaterial = new THREE.MeshBasicMaterial({
       color: 0x0088ff,
       transparent: true,
@@ -503,8 +432,8 @@ export class WeaponSystem extends System {
 
     this.muzzleFlashes.push({
       mesh: glow,
-      lifetime: 0.1,
-      maxLifetime: 0.1,
+      lifetime,
+      maxLifetime: lifetime,
     });
   }
 

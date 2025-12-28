@@ -26,6 +26,9 @@ import {
 // Import archetypes and config
 import { createMech } from '../archetypes/createMech';
 import { MechConfigs } from '../config/MechConfigs';
+import { GAME_CONFIG } from '../config/GameConfig';
+import { CAMERA_CONFIG } from '../config/CameraConfig';
+import { RENDERING_CONFIG } from '../config/RenderingConfig';
 
 // Import components for HUD access
 import { HeatComponent } from '../components/HeatComponent';
@@ -61,7 +64,6 @@ export class Game {
 
   private lastTime: number = 0;
   private accumulator: number = 0;
-  private readonly FIXED_TIMESTEP: number = 1 / 60;
   private isRunning: boolean = false;
   private audioInitialized: boolean = false;
 
@@ -118,9 +120,9 @@ export class Game {
     this.terrainSystem = new DebugTerrainSystem(this.scene, this.physicsWorld);
     this.world.addSystem(this.terrainSystem);
 
-    // Get initial terrain height for spawn
+    // Get initial terrain height for spawn (using centralized config)
     const terrainHeight = this.terrainSystem.getHeightAt(0, 0);
-    const spawnHeight = terrainHeight + 15;
+    const spawnHeight = terrainHeight + GAME_CONFIG.SPAWN_HEIGHT_OFFSET;
 
     // Create player mech entity
     this.playerEntity = createMech(
@@ -215,45 +217,62 @@ export class Game {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, RENDERING_CONFIG.RENDERER.maxPixelRatio)
+    );
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 3.0;
+    this.renderer.toneMappingExposure =
+      RENDERING_CONFIG.RENDERER.toneMappingExposure;
     this.container.appendChild(this.renderer.domElement);
   }
 
   private setupScene(): void {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87ceeb); // Light sky blue
+    this.scene.background = new THREE.Color(
+      RENDERING_CONFIG.SCENE.backgroundColor
+    );
 
     this.camera = new THREE.PerspectiveCamera(
-      75,
+      CAMERA_CONFIG.THIRD_PERSON.fov,
       window.innerWidth / window.innerHeight,
-      0.1,
-      2000
+      CAMERA_CONFIG.NEAR,
+      CAMERA_CONFIG.FAR
     );
     this.camera.position.set(0, 15, 30);
   }
 
   private setupLighting(): void {
+    const { LIGHTING, SHADOWS } = RENDERING_CONFIG;
+
     // Simple ambient light for base illumination
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    this.ambientLight = new THREE.AmbientLight(
+      LIGHTING.ambient.color,
+      LIGHTING.ambient.intensity
+    );
     this.scene.add(this.ambientLight);
 
     // Main directional light (sun)
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    this.directionalLight.position.set(100, 200, 50);
+    this.directionalLight = new THREE.DirectionalLight(
+      LIGHTING.directional.color,
+      LIGHTING.directional.intensity
+    );
+    this.directionalLight.position.set(
+      LIGHTING.directional.position.x,
+      LIGHTING.directional.position.y,
+      LIGHTING.directional.position.z
+    );
     this.directionalLight.castShadow = true;
-    this.directionalLight.shadow.mapSize.width = 2048;
-    this.directionalLight.shadow.mapSize.height = 2048;
-    this.directionalLight.shadow.camera.near = 10;
-    this.directionalLight.shadow.camera.far = 500;
-    this.directionalLight.shadow.camera.left = -150;
-    this.directionalLight.shadow.camera.right = 150;
-    this.directionalLight.shadow.camera.top = 150;
-    this.directionalLight.shadow.camera.bottom = -150;
-    this.directionalLight.shadow.bias = -0.0005;
+    this.directionalLight.shadow.mapSize.width = SHADOWS.mapSize;
+    this.directionalLight.shadow.mapSize.height = SHADOWS.mapSize;
+    this.directionalLight.shadow.camera.near = SHADOWS.cameraNear;
+    this.directionalLight.shadow.camera.far = SHADOWS.cameraFar;
+    this.directionalLight.shadow.camera.left = -SHADOWS.cameraSize;
+    this.directionalLight.shadow.camera.right = SHADOWS.cameraSize;
+    this.directionalLight.shadow.camera.top = SHADOWS.cameraSize;
+    this.directionalLight.shadow.camera.bottom = -SHADOWS.cameraSize;
+    this.directionalLight.shadow.bias = SHADOWS.bias;
     this.scene.add(this.directionalLight);
   }
 
@@ -289,18 +308,21 @@ export class Game {
     requestAnimationFrame(() => this.gameLoop());
 
     const currentTime = performance.now();
-    const frameTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+    const frameTime = Math.min(
+      (currentTime - this.lastTime) / 1000,
+      GAME_CONFIG.MAX_FRAME_TIME
+    );
     this.lastTime = currentTime;
 
-    // Fixed timestep physics/game logic
+    // Fixed timestep physics/game logic (using centralized config)
     this.accumulator += frameTime;
-    while (this.accumulator >= this.FIXED_TIMESTEP) {
-      this.fixedUpdate(this.FIXED_TIMESTEP);
-      this.accumulator -= this.FIXED_TIMESTEP;
+    while (this.accumulator >= GAME_CONFIG.FIXED_TIMESTEP) {
+      this.fixedUpdate(GAME_CONFIG.FIXED_TIMESTEP);
+      this.accumulator -= GAME_CONFIG.FIXED_TIMESTEP;
     }
 
     // Variable timestep rendering
-    const alpha = this.accumulator / this.FIXED_TIMESTEP;
+    const alpha = this.accumulator / GAME_CONFIG.FIXED_TIMESTEP;
     this.render(alpha);
   }
 

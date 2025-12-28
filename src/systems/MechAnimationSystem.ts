@@ -4,6 +4,7 @@ import { MechComponent } from '../components/MechComponent';
 import { PhysicsComponent } from '../components/PhysicsComponent';
 import { RenderComponent } from '../components/RenderComponent';
 import { EventBus } from '../core/EventBus';
+import { ANIMATION_CONFIG } from '../config/AnimationConfig';
 
 /**
  * Mech animation system handles walk cycles and torso rotation.
@@ -28,7 +29,7 @@ export class MechAnimationSystem extends System {
       // Calculate normalized speed
       const speed = physics.getHorizontalSpeed() / mech.config.maxSpeed;
 
-      if (speed > 0.02 && physics.isGrounded) {
+      if (speed > ANIMATION_CONFIG.IDLE_SPEED_THRESHOLD && physics.isGrounded) {
         // Accumulate walk time
         mech.walkTime += dt;
 
@@ -55,8 +56,11 @@ export class MechAnimationSystem extends System {
     mech: MechComponent,
     speed: number
   ): void {
-    // Calculate walk cycle phase
-    const animationRate = 8 * Math.sqrt(Math.max(0, Math.min(1.5, speed)));
+    // Calculate walk cycle phase using centralized config
+    const { rateMultiplier, maxSpeedForAnimation } = ANIMATION_CONFIG.WALK;
+    const animationRate =
+      rateMultiplier *
+      Math.sqrt(Math.max(0, Math.min(maxSpeedForAnimation, speed)));
     const walkCycle = Math.sin(mech.walkTime * animationRate);
     const currentSign = walkCycle >= 0 ? 1 : -1;
 

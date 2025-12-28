@@ -1,4 +1,6 @@
 import type { InputSnapshot } from '../types';
+import { InputComponent } from '../components/InputComponent';
+import { CONTROLS_CONFIG } from '../config/ControlsConfig';
 
 export class InputManager {
   private container: HTMLElement;
@@ -8,7 +10,7 @@ export class InputManager {
   private mouseDeltaX: number = 0;
   private mouseDeltaY: number = 0;
   private mouseButtons: Map<number, boolean> = new Map();
-  private weaponSlot: number = 1;
+  private weaponSlot: number = CONTROLS_CONFIG.WEAPON_SLOTS.min;
   private isLocked: boolean = false;
 
   // For network - stores the last snapshot
@@ -16,34 +18,9 @@ export class InputManager {
 
   constructor(container: HTMLElement) {
     this.container = container;
-    this.currentSnapshot = this.createEmptySnapshot();
+    // Use InputComponent's createEmptySnapshot as single source of truth
+    this.currentSnapshot = InputComponent.createEmptySnapshot();
     this.setupEventListeners();
-  }
-
-  private createEmptySnapshot(): InputSnapshot {
-    return {
-      timestamp: performance.now(),
-      // Movement (W/S)
-      forward: false,
-      backward: false,
-      // Turning (A/D)
-      turnLeft: false,
-      turnRight: false,
-      // Torso/Head control (Arrow keys)
-      torsoLeft: false,
-      torsoRight: false,
-      lookUp: false,
-      lookDown: false,
-      // Actions
-      fire: false,
-      altFire: false,
-      // Mouse
-      mouseX: 0,
-      mouseY: 0,
-      mouseDeltaX: 0,
-      mouseDeltaY: 0,
-      weaponSlot: 1,
-    };
   }
 
   private setupEventListeners(): void {
@@ -115,9 +92,8 @@ export class InputManager {
     // Prevent page scrolling
     event.preventDefault();
 
-    // Cycle weapon slots (1-4)
-    const minSlot = 1;
-    const maxSlot = 4;
+    // Cycle weapon slots using config
+    const { min: minSlot, max: maxSlot } = CONTROLS_CONFIG.WEAPON_SLOTS;
 
     if (event.deltaY < 0) {
       // Scroll up - next weapon

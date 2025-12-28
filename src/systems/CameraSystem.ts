@@ -7,6 +7,7 @@ import { MechComponent } from '../components/MechComponent';
 import { RenderComponent } from '../components/RenderComponent';
 import type { CameraMode } from '../types';
 import type { MechModel } from '../rendering/MechModel';
+import { CAMERA_CONFIG } from '../config/CameraConfig';
 
 /**
  * Camera system handles first-person and third-person camera views.
@@ -22,12 +23,6 @@ export class CameraSystem extends System {
   private currentMode: CameraMode = 'third-person';
   private isTransitioning: boolean = false;
   private transitionProgress: number = 0;
-  private transitionDuration: number = 0.3;
-
-  // Third-person camera settings
-  private distance: number = 25;
-  private height: number = 12;
-  private lookAtHeight: number = 8;
 
   // Smoothed camera values
   private currentPosition: THREE.Vector3 = new THREE.Vector3();
@@ -68,11 +63,11 @@ export class CameraSystem extends System {
     this.currentMode =
       this.currentMode === 'first-person' ? 'third-person' : 'first-person';
 
-    // Adjust FOV for first person
+    // Adjust FOV based on camera mode (using centralized config)
     if (this.currentMode === 'first-person') {
-      this.camera.fov = 90;
+      this.camera.fov = CAMERA_CONFIG.FIRST_PERSON.fov;
     } else {
-      this.camera.fov = 75;
+      this.camera.fov = CAMERA_CONFIG.THIRD_PERSON.fov;
     }
     this.camera.updateProjectionMatrix();
   }
@@ -86,9 +81,9 @@ export class CameraSystem extends System {
     this.previousPosition.copy(this.currentPosition);
     this.previousTarget.copy(this.currentTarget);
 
-    // Handle transition
+    // Handle transition (using centralized config)
     if (this.isTransitioning) {
-      this.transitionProgress += dt / this.transitionDuration;
+      this.transitionProgress += dt / CAMERA_CONFIG.TRANSITION.duration;
       if (this.transitionProgress >= 1) {
         this.transitionProgress = 1;
         this.isTransitioning = false;
@@ -149,8 +144,15 @@ export class CameraSystem extends System {
         this.currentPosition.copy(this._firstPersonPos);
         this.currentTarget.copy(this._firstPersonTarget);
       } else {
-        this.currentPosition.lerp(this._thirdPersonPos, 0.1);
-        this.currentTarget.lerp(this._thirdPersonTarget, 0.15);
+        // Use smoothing factors from centralized config
+        this.currentPosition.lerp(
+          this._thirdPersonPos,
+          CAMERA_CONFIG.SMOOTHING.position
+        );
+        this.currentTarget.lerp(
+          this._thirdPersonTarget,
+          CAMERA_CONFIG.SMOOTHING.target
+        );
       }
     }
   }
@@ -167,7 +169,7 @@ export class CameraSystem extends System {
       if (model.getCockpitPosition) {
         const cockpitPos = model.getCockpitPosition();
         out.copy(cockpitPos);
-        out.y += 0.2; // Small eye offset
+        out.y += CAMERA_CONFIG.FIRST_PERSON.eyeOffset;
         return;
       }
     }
@@ -188,7 +190,11 @@ export class CameraSystem extends System {
     this._torsoRotation.set(-mech.headPitch, mech.torsoYaw + Math.PI, 0);
     this._forward.applyEuler(this._torsoRotation);
 
-    out.copy(position).add(this._forward.multiplyScalar(100));
+    out
+      .copy(position)
+      .add(
+        this._forward.multiplyScalar(CAMERA_CONFIG.FIRST_PERSON.lookDistance)
+      );
   }
 
   private getThirdPersonPosition(
@@ -198,12 +204,13 @@ export class CameraSystem extends System {
   ): void {
     // Camera locked directly behind torso (torsoYaw is world orientation)
     const torsoWorldYaw = mech.torsoYaw;
+    const { distance, height } = CAMERA_CONFIG.THIRD_PERSON;
 
     // Calculate ideal camera position behind the mech
     this._idealOffset.set(
-      Math.sin(torsoWorldYaw) * this.distance,
-      this.height,
-      Math.cos(torsoWorldYaw) * this.distance
+      Math.sin(torsoWorldYaw) * distance,
+      height,
+      Math.cos(torsoWorldYaw) * distance
     );
 
     out.copy(transform.position).add(this._idealOffset);
@@ -216,11 +223,11 @@ export class CameraSystem extends System {
   ): void {
     // torsoYaw is world orientation
     const torsoWorldYaw = mech.torsoYaw;
+    const { lookAtHeight, lookDistance } = CAMERA_CONFIG.THIRD_PERSON;
 
     // Look at a point in front of the mech, adjusted by head pitch
-    const lookDistance = 50;
     out.copy(transform.position);
-    out.y += this.lookAtHeight;
+    out.y += lookAtHeight;
 
     // Apply head pitch to look target
     out.x -= Math.sin(torsoWorldYaw) * Math.cos(mech.headPitch) * lookDistance;

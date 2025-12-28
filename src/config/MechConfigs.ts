@@ -1,6 +1,43 @@
 import type { MechConfig } from '../types';
 
 /**
+ * Mech constants - single source of truth for mech-wide settings.
+ */
+export const MECH_CONSTANTS = {
+  /** Head pitch limits (radians) - negative = look down, positive = look up */
+  HEAD_PITCH: {
+    /** Maximum downward pitch (negative value) */
+    min: -0.4,
+    /** Maximum upward pitch (positive value) */
+    max: 0.3,
+  },
+
+  /** Mesh rendering offsets (tied to MechModel geometry) */
+  MESH: {
+    /** Position offset from physics body to mesh */
+    positionOffset: { x: 0, y: -1, z: 0 },
+    /** Rotation offset (180° Y rotation for mesh facing) */
+    rotationOffset: { x: 0, y: Math.PI, z: 0 },
+  },
+
+  /** Physics body collision shape dimensions */
+  COLLISION: {
+    /** Main torso capsule */
+    torso: {
+      halfHeight: 2.5,
+      radius: 1.5,
+      offsetY: 3,
+    },
+    /** Leg capsule */
+    legs: {
+      halfHeight: 2.0,
+      radius: 1.0,
+      offsetY: -2,
+    },
+  },
+} as const;
+
+/**
  * Predefined mech configurations.
  */
 export const MechConfigs: Record<string, MechConfig> = {

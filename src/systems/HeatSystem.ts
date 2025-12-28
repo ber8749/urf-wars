@@ -2,6 +2,7 @@ import { System } from '../core/System';
 import type { ComponentClass } from '../core/Component';
 import { HeatComponent } from '../components/HeatComponent';
 import { EventBus } from '../core/EventBus';
+import { HEAT_CONFIG } from '../config/HeatConfig';
 
 /**
  * Heat system manages heat dissipation and overheat states.
@@ -18,8 +19,11 @@ export class HeatSystem extends System {
         heat.current = Math.max(0, heat.current - heat.dissipationRate * dt);
       }
 
-      // Check for recovery from overheat
-      if (heat.isOverheated && heat.current < heat.max * 0.5) {
+      // Check for recovery from overheat (using centralized config)
+      if (
+        heat.isOverheated &&
+        heat.current < heat.max * HEAT_CONFIG.RECOVERY_THRESHOLD
+      ) {
         heat.isOverheated = false;
         heat.warningTriggered = false;
         EventBus.emit('heat:cooldown', entity.id);

@@ -4,6 +4,7 @@ import type { ComponentClass } from '../core/Component';
 import { PhysicsComponent } from '../components/PhysicsComponent';
 import { TransformComponent } from '../components/TransformComponent';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
+import { PHYSICS_CONFIG } from '../config/PhysicsConfig';
 
 /**
  * Physics system steps the physics world and syncs transforms.
@@ -46,10 +47,10 @@ export class PhysicsSystem extends System {
       const linvel = body.linvel();
       physics.velocity.set(linvel.x, linvel.y, linvel.z);
 
-      // Check if grounded
+      // Check if grounded (using centralized config)
       physics.isGrounded = this.physicsWorld.isGrounded(
         transform.position,
-        1.0
+        PHYSICS_CONFIG.GROUND_CHECK_DISTANCE
       );
     }
   }

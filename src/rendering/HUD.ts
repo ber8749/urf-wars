@@ -1,3 +1,5 @@
+import { HEAT_CONFIG } from '../config/HeatConfig';
+
 // Interface for the mech data provider (works with both Mech class and ECS entity wrapper)
 interface HeatSystemInterface {
   getCurrentHeat(): number;
@@ -414,9 +416,9 @@ export class HUD {
         'linear-gradient(90deg, #00ff88, #ffff00)';
     }
 
-    // Handle heat warning display
+    // Handle heat warning display (using centralized config)
     const isOverheated = heatSystem.isOverheated();
-    const isWarning = heatPercent >= 70;
+    const isWarning = heatPercent >= HEAT_CONFIG.WARNING_THRESHOLD * 100;
 
     if (isOverheated && !this.lastHeatWarningState) {
       this.showWarning('EMERGENCY SHUTDOWN');
