@@ -54,6 +54,9 @@ export class InputManager {
     window.addEventListener('mousemove', this.onMouseMove.bind(this));
     window.addEventListener('mousedown', this.onMouseDown.bind(this));
     window.addEventListener('mouseup', this.onMouseUp.bind(this));
+    window.addEventListener('wheel', this.onWheel.bind(this), {
+      passive: false,
+    });
 
     // Pointer lock - only request on user click (required by browsers)
     this.container.addEventListener('click', () => {
@@ -103,6 +106,27 @@ export class InputManager {
 
   private onMouseUp(event: MouseEvent): void {
     this.mouseButtons.set(event.button, false);
+  }
+
+  private onWheel(event: WheelEvent): void {
+    if (!this.isLocked) return;
+
+    // Prevent page scrolling
+    event.preventDefault();
+
+    // Cycle weapon slots (1-4)
+    const minSlot = 1;
+    const maxSlot = 4;
+
+    if (event.deltaY < 0) {
+      // Scroll up - next weapon
+      this.weaponSlot =
+        this.weaponSlot >= maxSlot ? minSlot : this.weaponSlot + 1;
+    } else if (event.deltaY > 0) {
+      // Scroll down - previous weapon
+      this.weaponSlot =
+        this.weaponSlot <= minSlot ? maxSlot : this.weaponSlot - 1;
+    }
   }
 
   lock(): void {
