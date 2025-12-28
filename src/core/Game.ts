@@ -4,6 +4,7 @@ import { InputManager } from './InputManager';
 import { PhysicsWorld, initPhysics } from '../physics/PhysicsWorld';
 import { HUD } from '../rendering/HUD';
 import { PostProcessing } from '../rendering/PostProcessing';
+import { PauseMenu } from '../rendering/PauseMenu';
 import { SoundManager } from '../audio/SoundManager';
 
 // Import systems
@@ -52,6 +53,8 @@ export class Game {
   private playerEntity!: Entity;
   private hud!: HUD;
   private postProcessing!: PostProcessing;
+  private pauseMenu!: PauseMenu;
+  private isPaused: boolean = false;
 
   // Simple global lighting
   private directionalLight!: THREE.DirectionalLight;
@@ -142,6 +145,15 @@ export class Game {
       this.renderer,
       this.scene,
       this.camera
+    );
+
+    // Setup pause menu
+    this.pauseMenu = new PauseMenu(
+      this.container,
+      this.postProcessing,
+      (paused) => {
+        this.isPaused = paused;
+      }
     );
 
     // Handle window resize
@@ -314,14 +326,17 @@ export class Game {
     );
     this.lastTime = currentTime;
 
-    // Fixed timestep physics/game logic (using centralized config)
-    this.accumulator += frameTime;
-    while (this.accumulator >= GAME_CONFIG.FIXED_TIMESTEP) {
-      this.fixedUpdate(GAME_CONFIG.FIXED_TIMESTEP);
-      this.accumulator -= GAME_CONFIG.FIXED_TIMESTEP;
+    // Skip game logic when paused, but still render
+    if (!this.isPaused) {
+      // Fixed timestep physics/game logic (using centralized config)
+      this.accumulator += frameTime;
+      while (this.accumulator >= GAME_CONFIG.FIXED_TIMESTEP) {
+        this.fixedUpdate(GAME_CONFIG.FIXED_TIMESTEP);
+        this.accumulator -= GAME_CONFIG.FIXED_TIMESTEP;
+      }
     }
 
-    // Variable timestep rendering
+    // Variable timestep rendering (always render to show pause menu)
     const alpha = this.accumulator / GAME_CONFIG.FIXED_TIMESTEP;
     this.render(alpha);
   }

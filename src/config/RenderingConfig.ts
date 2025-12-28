@@ -4,15 +4,15 @@
 export const RENDERING_CONFIG = {
   /** Post-processing settings */
   POST_PROCESSING: {
-    scanlines: true,
-    scanlineIntensity: 0.02,
-    vignette: true,
-    vignetteIntensity: 0.1,
-    bloom: true,
-    bloomIntensity: 0.15,
-    chromaticAberration: true,
-    aberrationAmount: 0.0005,
-    colorGrading: true,
+    scanlines: false,
+    scanlineIntensity: 0.15,
+    vignette: false,
+    vignetteIntensity: 0.4,
+    bloom: false,
+    bloomIntensity: 0.5,
+    chromaticAberration: false,
+    aberrationAmount: 0.003,
+    colorGrading: false,
   },
 
   /** Renderer settings */

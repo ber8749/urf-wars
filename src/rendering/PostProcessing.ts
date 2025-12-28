@@ -75,10 +75,20 @@ export class PostProcessing {
           value: new THREE.Vector2(window.innerWidth, window.innerHeight),
         },
         time: { value: 0 },
-        scanlineIntensity: { value: this.settings.scanlineIntensity },
-        vignetteIntensity: { value: this.settings.vignetteIntensity },
-        bloomIntensity: { value: this.settings.bloomIntensity },
-        aberrationAmount: { value: this.settings.aberrationAmount },
+        scanlineIntensity: {
+          value: this.settings.scanlines ? this.settings.scanlineIntensity : 0,
+        },
+        vignetteIntensity: {
+          value: this.settings.vignette ? this.settings.vignetteIntensity : 0,
+        },
+        bloomIntensity: {
+          value: this.settings.bloom ? this.settings.bloomIntensity : 0,
+        },
+        aberrationAmount: {
+          value: this.settings.chromaticAberration
+            ? this.settings.aberrationAmount
+            : 0,
+        },
       },
       vertexShader: `
         varying vec2 vUv;
