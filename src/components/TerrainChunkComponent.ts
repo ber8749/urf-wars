@@ -49,9 +49,11 @@ export class TerrainChunkComponent implements Component {
    * Get height at a local position within the chunk
    */
   getHeightAt(localX: number, localZ: number): number {
+    // Vertex count is chunkSize + 1 (size segments = size+1 vertices)
+    const vertexCount = this.chunkSize + 1;
     // Clamp to valid range
-    const x = Math.max(0, Math.min(this.chunkSize - 1, Math.floor(localX)));
-    const z = Math.max(0, Math.min(this.chunkSize - 1, Math.floor(localZ)));
-    return this.heights[z * this.chunkSize + x];
+    const x = Math.max(0, Math.min(this.chunkSize, Math.floor(localX)));
+    const z = Math.max(0, Math.min(this.chunkSize, Math.floor(localZ)));
+    return this.heights[z * vertexCount + x];
   }
 }

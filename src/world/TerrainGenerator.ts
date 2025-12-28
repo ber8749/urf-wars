@@ -160,10 +160,12 @@ export class TerrainGenerator {
 
   private generateHeightmap(chunkX: number, chunkZ: number): Float32Array {
     const size = this.chunkSize;
-    const heights = new Float32Array(size * size);
+    // Use size+1 vertices so edge vertices overlap with adjacent chunks
+    const vertexCount = size + 1;
+    const heights = new Float32Array(vertexCount * vertexCount);
 
-    for (let z = 0; z < size; z++) {
-      for (let x = 0; x < size; x++) {
+    for (let z = 0; z < vertexCount; z++) {
+      for (let x = 0; x < vertexCount; x++) {
         const worldX = (chunkX * size + x) * this.chunkScale;
         const worldZ = (chunkZ * size + z) * this.chunkScale;
 
@@ -186,7 +188,7 @@ export class TerrainGenerator {
         const biome = this.biomeManager.getBiomeAt(worldX, worldZ);
         height *= biome.heightScale;
 
-        heights[z * size + x] = height;
+        heights[z * vertexCount + x] = height;
       }
     }
 

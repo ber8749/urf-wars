@@ -28,11 +28,13 @@ export class TerrainChunk {
   }
 
   private createMesh(): THREE.Mesh {
+    // Use size segments to get size+1 vertices, with exact chunkScale spacing
+    const vertexCount = this.size + 1;
     const geometry = new THREE.PlaneGeometry(
       this.size * this.scale,
       this.size * this.scale,
-      this.size - 1,
-      this.size - 1
+      this.size, // size segments = size+1 vertices
+      this.size
     );
 
     // Rotate to be horizontal
@@ -43,9 +45,9 @@ export class TerrainChunk {
     const colors = new Float32Array(positions.count * 3);
 
     for (let i = 0; i < positions.count; i++) {
-      const x = i % this.size;
-      const z = Math.floor(i / this.size);
-      const height = this.heights[z * this.size + x];
+      const x = i % vertexCount;
+      const z = Math.floor(i / vertexCount);
+      const height = this.heights[z * vertexCount + x];
 
       positions.setY(i, height);
 
@@ -80,6 +82,9 @@ export class TerrainChunk {
   }
 
   getHeightAt(worldX: number, worldZ: number): number {
+    // Vertex count is size + 1 (size segments = size+1 vertices)
+    const vertexCount = this.size + 1;
+
     // Convert world position to local chunk position
     // Chunk is centered at its position, so we need to offset
     const halfSize = (this.size * this.scale) / 2;
@@ -93,16 +98,16 @@ export class TerrainChunk {
     // Bilinear interpolation
     const x0 = Math.floor(localX);
     const z0 = Math.floor(localZ);
-    const x1 = Math.min(x0 + 1, this.size - 1);
-    const z1 = Math.min(z0 + 1, this.size - 1);
+    const x1 = Math.min(x0 + 1, this.size);
+    const z1 = Math.min(z0 + 1, this.size);
 
     const fx = localX - x0;
     const fz = localZ - z0;
 
-    const h00 = this.heights[z0 * this.size + x0] || 0;
-    const h10 = this.heights[z0 * this.size + x1] || 0;
-    const h01 = this.heights[z1 * this.size + x0] || 0;
-    const h11 = this.heights[z1 * this.size + x1] || 0;
+    const h00 = this.heights[z0 * vertexCount + x0] || 0;
+    const h10 = this.heights[z0 * vertexCount + x1] || 0;
+    const h01 = this.heights[z1 * vertexCount + x0] || 0;
+    const h11 = this.heights[z1 * vertexCount + x1] || 0;
 
     const h0 = h00 * (1 - fx) + h10 * fx;
     const h1 = h01 * (1 - fx) + h11 * fx;
