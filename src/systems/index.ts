@@ -1,6 +1,8 @@
 // Export all systems
 export { InputSystem } from './InputSystem';
 export { MovementSystem } from './MovementSystem';
+export { TorsoControlSystem } from './TorsoControlSystem';
+export { WeaponControlSystem } from './WeaponControlSystem';
 export { PhysicsSystem } from './PhysicsSystem';
 export { HeatSystem } from './HeatSystem';
 export { WeaponSystem } from './WeaponSystem';

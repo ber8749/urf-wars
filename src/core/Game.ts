@@ -10,6 +10,8 @@ import { SoundManager } from '../audio/SoundManager';
 import {
   InputSystem,
   MovementSystem,
+  TorsoControlSystem,
+  WeaponControlSystem,
   PhysicsSystem,
   HeatSystem,
   WeaponSystem,
@@ -86,12 +88,23 @@ export class Game {
     this.world = new World();
 
     // Register systems in correct order
+    // 1. Input capture
     this.world.addSystem(new InputSystem(this.inputManager));
+    // 2. Movement (tank controls, direct velocity)
     this.world.addSystem(new MovementSystem(this.physicsWorld));
+    // 3. Torso/head rotation (mouse/keyboard)
+    this.world.addSystem(new TorsoControlSystem());
+    // 4. Weapon input handling
+    this.world.addSystem(new WeaponControlSystem());
+    // 5. Physics simulation
     this.world.addSystem(new PhysicsSystem(this.physicsWorld));
+    // 6. Heat management
     this.world.addSystem(new HeatSystem());
+    // 7. Weapon firing logic
     this.world.addSystem(new WeaponSystem(this.scene));
+    // 8. Projectile updates
     this.world.addSystem(new ProjectileSystem(this.scene));
+    // 9. Mech animations
     this.world.addSystem(new MechAnimationSystem());
 
     this.renderSystem = new RenderSystem(this.scene);

@@ -3,7 +3,7 @@ import type { Component } from '../core/Component';
 
 /**
  * Physics component for entities with physics bodies.
- * Stores a reference to the physics body ID and physics state.
+ * Stores only runtime physics state - configuration lives in MechComponent.config.
  */
 export class PhysicsComponent implements Component {
   static readonly type = 'Physics';
@@ -12,31 +12,14 @@ export class PhysicsComponent implements Component {
   /** ID of the physics body in PhysicsWorld */
   bodyId: string;
 
-  /** Mass of the body */
-  mass: number;
-
   /** Whether the entity is touching the ground */
   isGrounded: boolean = false;
 
-  /** Current velocity */
+  /** Current velocity (synced from physics body each frame) */
   velocity: THREE.Vector3 = new THREE.Vector3();
 
-  /** Maximum speed (for clamping) */
-  maxSpeed: number;
-
-  /** Turn rate in radians per second */
-  turnRate: number;
-
-  constructor(
-    bodyId: string,
-    mass: number,
-    maxSpeed: number = 25,
-    turnRate: number = 1.5
-  ) {
+  constructor(bodyId: string) {
     this.bodyId = bodyId;
-    this.mass = mass;
-    this.maxSpeed = maxSpeed;
-    this.turnRate = turnRate;
   }
 
   /**

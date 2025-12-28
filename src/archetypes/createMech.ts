@@ -60,12 +60,8 @@ export function createMech(
   // Create components
   const transformComp = new TransformComponent(spawnPosition);
 
-  const physicsComp = new PhysicsComponent(
-    bodyId,
-    config.mass,
-    config.maxSpeed,
-    config.turnRate
-  );
+  // PhysicsComponent only holds runtime state - config comes from MechComponent
+  const physicsComp = new PhysicsComponent(bodyId);
 
   // Mesh offset: -1 matches torso collider bottom
   // Pass the model instance for animation methods
