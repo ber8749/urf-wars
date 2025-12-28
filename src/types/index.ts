@@ -60,11 +60,10 @@ export interface InputState {
   backward: boolean;
   strafeLeft: boolean;
   strafeRight: boolean;
-  turnLeft: boolean;
-  turnRight: boolean;
   fire1: boolean;
   fire2: boolean;
   switchCamera: boolean;
+  toggleControls: boolean;
   mouseX: number;
   mouseY: number;
   mouseDeltaX: number;

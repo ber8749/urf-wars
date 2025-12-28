@@ -108,6 +108,61 @@ html, body {
   50% { opacity: 0.5; }
 }
 
+.controls-hint {
+  margin-top: 15px;
+  color: #00aa00;
+  font-size: 14px;
+}
+
+/* Controls Panel (toggleable with C) */
+.controls-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 20, 0, 0.9);
+  border: 2px solid #00ff00;
+  padding: 20px 30px;
+  z-index: 500;
+  color: #00ff00;
+  font-family: 'Courier New', monospace;
+  min-width: 280px;
+  transition: opacity 0.2s ease;
+}
+
+.controls-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.controls-panel h3 {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #00ff00;
+  border-bottom: 1px solid #00ff00;
+  padding-bottom: 10px;
+  font-size: 16px;
+}
+
+.controls-panel .control-group {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  padding: 4px 0;
+}
+
+.controls-panel .key {
+  background: #003300;
+  padding: 3px 10px;
+  border: 1px solid #00ff00;
+  font-size: 11px;
+}
+
+.controls-panel .action {
+  color: #00cc00;
+  font-size: 12px;
+}
+
 /* HUD Styles */
 #hud {
   user-select: none;

@@ -48,14 +48,6 @@ export class MechController {
       return;
     }
 
-    // Leg turning (Q/E keys)
-    if (state.turnLeft) {
-      this.mech.legRotation += this.mech.turnRate * dt;
-    }
-    if (state.turnRight) {
-      this.mech.legRotation -= this.mech.turnRate * dt;
-    }
-
     // Calculate movement direction in leg-local space
     const moveDir = new THREE.Vector3();
     

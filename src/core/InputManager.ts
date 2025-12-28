@@ -20,7 +20,7 @@ export class InputManager {
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.code);
       // Prevent default for game keys
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'Tab', 'Space'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyV', 'KeyC', 'Space'].includes(e.code)) {
         e.preventDefault();
       }
     });
@@ -66,11 +66,10 @@ export class InputManager {
       backward: this.keys.has('KeyS'),
       strafeLeft: this.keys.has('KeyA'),
       strafeRight: this.keys.has('KeyD'),
-      turnLeft: this.keys.has('KeyQ'),
-      turnRight: this.keys.has('KeyE'),
       fire1: this.mouseButtons.has(0), // Left click
       fire2: this.mouseButtons.has(2), // Right click
-      switchCamera: this.keys.has('Tab'),
+      switchCamera: this.keys.has('KeyV'),
+      toggleControls: this.keys.has('KeyC'),
       mouseX: this.mouseX,
       mouseY: this.mouseY,
       mouseDeltaX: this.mouseDeltaX,
