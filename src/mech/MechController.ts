@@ -93,6 +93,18 @@ export class MechController {
     // Only auto-turn if moving fast enough
     if (speed < this.minSpeedForAutoTurn) return;
     
+    // Get leg forward direction in world space
+    const legForward = new THREE.Vector3(0, 0, -1);
+    legForward.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mech.legRotation);
+    
+    // Check if we're moving forward or backward relative to legs
+    const velocityDir = this.mech.velocity.clone().normalize();
+    const dot = velocityDir.dot(legForward);
+    
+    // Only auto-rotate when moving primarily forward (dot > 0)
+    // Skip when moving backward to prevent spinning
+    if (dot < 0.1) return;
+    
     // Calculate the angle of movement direction (in world space)
     // atan2 gives angle from +Z axis, but we want angle from -Z (forward)
     const moveAngle = Math.atan2(-this.mech.velocity.x, -this.mech.velocity.z);
