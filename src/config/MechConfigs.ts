@@ -14,8 +14,12 @@ export const MECH_CONSTANTS = {
 
   /** Mesh rendering offsets (tied to MechModel geometry) */
   MESH: {
-    /** Position offset from physics body to mesh */
-    positionOffset: { x: 0, y: -1, z: 0 },
+    /**
+     * Position offset from physics body to mesh.
+     * Calculated so mesh feet (-2.4 in mesh space) align with collision bottom (-5.0).
+     * Offset = -5.0 + 2.4 = -2.6
+     */
+    positionOffset: { x: 0, y: -2.6, z: 0 },
     /** Rotation offset (180° Y rotation for mesh facing) */
     rotationOffset: { x: 0, y: Math.PI, z: 0 },
   },
