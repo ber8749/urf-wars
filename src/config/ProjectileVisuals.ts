@@ -62,30 +62,30 @@ export function createFlameMaterial(): THREE.MeshBasicMaterial {
   });
 }
 
-/** Create laser beam outer material */
+/** Create laser beam outer material - bright red glow */
 export function createLaserBeamMaterial(): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({
-    color: 0xff0000,
+    color: 0xff2200,
     transparent: true,
-    opacity: 0.8,
+    opacity: 1.0,
     blending: THREE.AdditiveBlending,
   });
 }
 
-/** Create laser beam core material */
+/** Create laser beam core material - intense white-hot core */
 export function createLaserBeamCoreMaterial(): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({
-    color: 0xffcccc,
+    color: 0xffffff,
     transparent: true,
-    opacity: 0.9,
+    opacity: 1.0,
     blending: THREE.AdditiveBlending,
   });
 }
 
-/** Create muzzle flash material */
+/** Create muzzle flash material - bright orange-yellow flash */
 export function createMuzzleFlashMaterial(): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({
-    color: 0xffaa00,
+    color: 0xffdd44,
     transparent: true,
     opacity: 1.0,
     blending: THREE.AdditiveBlending,
@@ -203,27 +203,27 @@ export function createMissileMesh(
 export const PROJECTILE_VISUALS = {
   /** Laser beam settings */
   LASER: {
-    outerRadius: 0.1,
-    innerRadius: 0.04,
+    outerRadius: 0.2,
+    innerRadius: 0.08,
     lifetime: 0.15,
   },
 
   /** Muzzle flash settings */
   MUZZLE_FLASH: {
     autocannon: {
-      coreRadius: 0.3,
-      glowRadius: 0.6,
-      lifetime: 0.06,
-    },
-    laser: {
-      coreRadius: 0.25,
-      glowRadius: 0.5,
+      coreRadius: 0.4,
+      glowRadius: 0.8,
       lifetime: 0.08,
     },
-    ppc: {
+    laser: {
       coreRadius: 0.4,
       glowRadius: 0.8,
       lifetime: 0.1,
+    },
+    ppc: {
+      coreRadius: 0.5,
+      glowRadius: 1.0,
+      lifetime: 0.12,
     },
   },
 } as const;

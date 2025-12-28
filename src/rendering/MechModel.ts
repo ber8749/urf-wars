@@ -65,34 +65,36 @@ export class MechModel {
   }
 
   private createMaterials(): void {
-    // Main armor - bright steel blue (high visibility!)
+    // Main armor - bright steel blue with visible self-illumination
     const armorMain = new THREE.MeshStandardMaterial({
-      color: 0x7799bb,
-      roughness: 0.5,
-      metalness: 0.6,
+      color: 0x8fafd0,
+      roughness: 0.7,
+      metalness: 0.3,
       flatShading: true,
-      emissive: 0x223344,
-      emissiveIntensity: 0.15,
+      emissive: 0x445566,
+      emissiveIntensity: 0.3,
     });
     this.materials.set('armor', armorMain);
 
     // Secondary armor - lighter gray-blue
     const armorSecondary = new THREE.MeshStandardMaterial({
-      color: 0x99aabb,
-      roughness: 0.6,
-      metalness: 0.4,
+      color: 0xb0c4de,
+      roughness: 0.7,
+      metalness: 0.2,
       flatShading: true,
-      emissive: 0x334455,
-      emissiveIntensity: 0.1,
+      emissive: 0x556677,
+      emissiveIntensity: 0.25,
     });
     this.materials.set('armorSecondary', armorSecondary);
 
-    // Joint/mechanical parts - visible dark gray
+    // Joint/mechanical parts - visible gray with some glow
     const joint = new THREE.MeshStandardMaterial({
-      color: 0x556677,
-      roughness: 0.4,
-      metalness: 0.7,
+      color: 0x778899,
+      roughness: 0.5,
+      metalness: 0.4,
       flatShading: true,
+      emissive: 0x334455,
+      emissiveIntensity: 0.2,
     });
     this.materials.set('joint', joint);
 
@@ -118,12 +120,14 @@ export class MechModel {
     });
     this.materials.set('glass', glass);
 
-    // Weapon barrel - metallic
+    // Weapon barrel - metallic with slight glow
     const weapon = new THREE.MeshStandardMaterial({
-      color: 0x667788,
-      roughness: 0.3,
-      metalness: 0.9,
+      color: 0x889aaa,
+      roughness: 0.4,
+      metalness: 0.6,
       flatShading: true,
+      emissive: 0x334455,
+      emissiveIntensity: 0.15,
     });
     this.materials.set('weapon', weapon);
   }

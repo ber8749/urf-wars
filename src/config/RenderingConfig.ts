@@ -36,12 +36,12 @@ export const RENDERING_CONFIG = {
   LIGHTING: {
     ambient: {
       color: 0xffffff,
-      intensity: 0.6,
+      intensity: 1.2,
     },
     directional: {
       color: 0xffffff,
-      intensity: 1.0,
-      position: { x: 100, y: 200, z: 50 },
+      intensity: 2.0,
+      position: { x: 50, y: 150, z: 100 }, // More frontal lighting
     },
   },
 
