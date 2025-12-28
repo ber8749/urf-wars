@@ -1,16 +1,39 @@
 import * as THREE from 'three';
-import { EntityManager } from './EntityManager';
+import { World } from './World';
 import { InputManager } from './InputManager';
 import { PhysicsWorld, initPhysics } from '../physics/PhysicsWorld';
-import { TerrainGenerator } from '../world/TerrainGenerator';
 import { Skybox } from '../world/Skybox';
-import { DayNightCycle } from '../world/DayNightCycle';
-import { Mech } from '../mech/Mech';
-import { MechController } from '../mech/MechController';
-import { CameraController } from '../camera/CameraController';
 import { HUD } from '../rendering/HUD';
 import { PostProcessing } from '../rendering/PostProcessing';
 import { SoundManager } from '../audio/SoundManager';
+
+// Import systems
+import {
+  InputSystem,
+  MovementSystem,
+  PhysicsSystem,
+  HeatSystem,
+  WeaponSystem,
+  ProjectileSystem,
+  RenderSystem,
+  CameraSystem,
+  MechAnimationSystem,
+  AudioSystem,
+  TerrainSystem,
+  DayNightSystem,
+} from '../systems';
+
+// Import archetypes and config
+import { createMech } from '../archetypes/createMech';
+import { MechConfigs } from '../config/MechConfigs';
+
+// Import components for HUD access
+import { HeatComponent } from '../components/HeatComponent';
+import { PhysicsComponent } from '../components/PhysicsComponent';
+import { MechComponent } from '../components/MechComponent';
+import { WeaponComponent } from '../components/WeaponComponent';
+import { HealthComponent } from '../components/HealthComponent';
+import type { Entity } from './Entity';
 
 export class Game {
   private container: HTMLElement;
@@ -18,28 +41,29 @@ export class Game {
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
 
-  private entityManager!: EntityManager;
+  private world!: World;
   private inputManager!: InputManager;
   private physicsWorld!: PhysicsWorld;
-  private terrainGenerator!: TerrainGenerator;
-  private cameraController!: CameraController;
+  private soundManager!: SoundManager;
+
+  private playerEntity!: Entity;
   private hud!: HUD;
   private postProcessing!: PostProcessing;
-
-  private playerMech!: Mech;
-  private mechController!: MechController;
-  private dayNightCycle!: DayNightCycle;
   private skybox!: Skybox;
-  private soundManager!: SoundManager;
 
   // Lights (stored for day/night cycle updates)
   private sunLight!: THREE.DirectionalLight;
   private ambientLight!: THREE.AmbientLight;
   private hemiLight!: THREE.HemisphereLight;
 
+  // Systems that need special access
+  private cameraSystem!: CameraSystem;
+  private renderSystem!: RenderSystem;
+  private terrainSystem!: TerrainSystem;
+
   private lastTime: number = 0;
   private accumulator: number = 0;
-  private readonly FIXED_TIMESTEP: number = 1 / 60; // 60Hz fixed update
+  private readonly FIXED_TIMESTEP: number = 1 / 60;
   private isRunning: boolean = false;
   private audioInitialized: boolean = false;
 
@@ -48,7 +72,7 @@ export class Game {
   }
 
   async init(): Promise<void> {
-    // Initialize Rapier WASM - dynamic import for WASM compatibility
+    // Initialize Rapier WASM
     await initPhysics();
 
     // Setup Three.js
@@ -56,56 +80,64 @@ export class Game {
     this.setupScene();
     this.setupLighting();
 
-    // Setup game systems
-    this.entityManager = new EntityManager(this.scene);
+    // Setup core services
     this.inputManager = new InputManager(this.container);
     this.physicsWorld = new PhysicsWorld();
-
-    // Setup world
-    this.terrainGenerator = new TerrainGenerator(this.scene, this.physicsWorld);
-    this.skybox = new Skybox(this.scene);
-
-    // Setup day/night cycle (dusk to dawn, never too dark)
-    this.dayNightCycle = new DayNightCycle(
-      this.scene,
-      this.skybox,
-      this.sunLight,
-      this.ambientLight,
-      this.hemiLight
-    );
-    // Slow down the cycle for gameplay (full cycle in ~5 minutes)
-    this.dayNightCycle.setCycleSpeed(0.003);
-
-    // Setup sound manager
     this.soundManager = new SoundManager();
-    // Attach audio listener to camera for 3D spatial audio
     this.camera.add(this.soundManager.getListener());
 
-    // Create player mech with sound manager
-    this.playerMech = new Mech(
+    // Create ECS world
+    this.world = new World();
+
+    // Create skybox (needed for DayNightSystem)
+    this.skybox = new Skybox(this.scene);
+
+    // Register systems in correct order
+    this.world.addSystem(new InputSystem(this.inputManager));
+    this.world.addSystem(new MovementSystem(this.physicsWorld));
+    this.world.addSystem(new PhysicsSystem(this.physicsWorld));
+    this.world.addSystem(new HeatSystem());
+    this.world.addSystem(new WeaponSystem(this.scene));
+    this.world.addSystem(new ProjectileSystem(this.scene));
+    this.world.addSystem(new MechAnimationSystem());
+
+    this.renderSystem = new RenderSystem(this.scene);
+    this.world.addSystem(this.renderSystem);
+
+    this.cameraSystem = new CameraSystem(this.camera);
+    this.world.addSystem(this.cameraSystem);
+
+    this.world.addSystem(new AudioSystem(this.soundManager));
+
+    this.terrainSystem = new TerrainSystem(this.scene, this.physicsWorld);
+    this.world.addSystem(this.terrainSystem);
+
+    this.world.addSystem(
+      new DayNightSystem(
+        this.scene,
+        this.skybox,
+        this.sunLight,
+        this.ambientLight,
+        this.hemiLight
+      )
+    );
+
+    // Get initial terrain height for spawn
+    const terrainHeight = this.terrainSystem.getHeightAt(0, 0);
+    const spawnHeight = terrainHeight + 15;
+
+    // Create player mech entity
+    this.playerEntity = createMech(
       'player-1',
-      this.scene,
+      MechConfigs.ATLAS,
       this.physicsWorld,
-      undefined,
-      this.soundManager
+      new THREE.Vector3(0, spawnHeight, 0),
+      true
     );
-    this.entityManager.addEntity(this.playerMech);
+    this.world.addEntity(this.playerEntity);
 
-    // Setup mech controller
-    this.mechController = new MechController(
-      this.playerMech,
-      this.inputManager
-    );
-
-    // Setup camera
-    this.cameraController = new CameraController(
-      this.camera,
-      this.playerMech,
-      this.inputManager
-    );
-
-    // Setup HUD
-    this.hud = new HUD(this.container, this.playerMech);
+    // Setup HUD with entity reference wrapper
+    this.hud = new HUD(this.container, this.createMechInterface());
 
     // Setup post processing
     this.postProcessing = new PostProcessing(
@@ -114,16 +146,71 @@ export class Game {
       this.camera
     );
 
-    // Generate initial terrain
-    this.terrainGenerator.generateAroundPosition(new THREE.Vector3(0, 0, 0));
-
-    // Position mech on top of terrain
-    const terrainHeight = this.terrainGenerator.getHeightAt(0, 0);
-    const spawnHeight = terrainHeight + 10;
-    this.playerMech.setPosition(new THREE.Vector3(0, spawnHeight, 0));
-
     // Handle window resize
     window.addEventListener('resize', this.onResize.bind(this));
+  }
+
+  /**
+   * Create an interface compatible with the existing HUD
+   */
+  private createMechInterface() {
+    const entity = this.playerEntity;
+    const cameraSystem = this.cameraSystem;
+
+    return {
+      getHeatSystem: () => {
+        const heat = entity.getComponent(HeatComponent);
+        return {
+          getCurrentHeat: () => heat?.current ?? 0,
+          getMaxHeat: () => heat?.max ?? 100,
+          isOverheated: () => heat?.isOverheated ?? false,
+        };
+      },
+      getSpeed: () => {
+        const physics = entity.getComponent(PhysicsComponent);
+        return physics?.getHorizontalSpeed() ?? 0;
+      },
+      getMaxSpeed: () => {
+        const mech = entity.getComponent(MechComponent);
+        return mech?.config.maxSpeed ?? 25;
+      },
+      getWeaponSystem: () => {
+        const weapons = entity.getComponent(WeaponComponent);
+        return {
+          getSelectedSlot: () => weapons?.selectedSlot ?? 1,
+          getWeapons: () =>
+            (weapons?.weapons ?? []).map((w) => ({
+              slot: w.slot,
+              config: { type: w.config.type },
+              cooldownRemaining: w.cooldownRemaining,
+              ammo: w.ammo,
+            })),
+        };
+      },
+      getArmorStatus: () => {
+        const health = entity.getComponent(HealthComponent);
+        const baseArmor = health?.baseArmor ?? {
+          head: 100,
+          torso: 100,
+          leftArm: 100,
+          rightArm: 100,
+          leftLeg: 100,
+          rightLeg: 100,
+        };
+        const armor = health?.armor ?? baseArmor;
+        return {
+          head: Math.round((armor.head / baseArmor.head) * 100),
+          torso: Math.round((armor.torso / baseArmor.torso) * 100),
+          leftArm: Math.round((armor.leftArm / baseArmor.leftArm) * 100),
+          rightArm: Math.round((armor.rightArm / baseArmor.rightArm) * 100),
+          leftLeg: Math.round((armor.leftLeg / baseArmor.leftLeg) * 100),
+          rightLeg: Math.round((armor.rightLeg / baseArmor.rightLeg) * 100),
+        };
+      },
+      getCameraController: () => ({
+        isFirstPerson: () => cameraSystem.isFirstPerson(),
+      }),
+    };
   }
 
   private setupRenderer(): void {
@@ -136,13 +223,12 @@ export class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 3.0; // Very bright
+    this.renderer.toneMappingExposure = 3.0;
     this.container.appendChild(this.renderer.domElement);
   }
 
   private setupScene(): void {
     this.scene = new THREE.Scene();
-    // Very light fog - doesn't darken the scene much
     this.scene.fog = new THREE.FogExp2(0x889999, 0.0005);
 
     this.camera = new THREE.PerspectiveCamera(
@@ -155,11 +241,11 @@ export class Game {
   }
 
   private setupLighting(): void {
-    // Ambient light for base illumination - VERY BRIGHT
+    // Ambient light for base illumination
     this.ambientLight = new THREE.AmbientLight(0xccddff, 2.0);
     this.scene.add(this.ambientLight);
 
-    // Main directional light (sun/moon) - VERY BRIGHT
+    // Main directional light (sun/moon)
     this.sunLight = new THREE.DirectionalLight(0xffffff, 5.0);
     this.sunLight.position.set(100, 200, 100);
     this.sunLight.castShadow = true;
@@ -174,7 +260,7 @@ export class Game {
     this.sunLight.shadow.bias = -0.0005;
     this.scene.add(this.sunLight);
 
-    // Hemisphere light for sky/ground color variation - BRIGHT
+    // Hemisphere light for sky/ground color variation
     this.hemiLight = new THREE.HemisphereLight(0xeeffff, 0xccbbaa, 1.5);
     this.scene.add(this.hemiLight);
   }
@@ -182,10 +268,9 @@ export class Game {
   start(): void {
     this.isRunning = true;
     this.lastTime = performance.now();
-    // Don't auto-lock pointer - wait for user click (handled in InputManager)
     this.gameLoop();
 
-    // Initialize audio on first user interaction (click to start)
+    // Initialize audio on first user interaction
     this.container.addEventListener('click', () => this.initAudio(), {
       once: false,
     });
@@ -193,15 +278,12 @@ export class Game {
 
   private async initAudio(): Promise<void> {
     if (this.audioInitialized) {
-      // Just resume if already initialized
       await this.soundManager.resume();
       return;
     }
 
     await this.soundManager.init();
     this.audioInitialized = true;
-
-    // Start cockpit ambience
     this.soundManager.startCockpitAmbience();
   }
 
@@ -215,7 +297,7 @@ export class Game {
     requestAnimationFrame(() => this.gameLoop());
 
     const currentTime = performance.now();
-    const frameTime = Math.min((currentTime - this.lastTime) / 1000, 0.1); // Cap at 100ms
+    const frameTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
 
     // Fixed timestep physics/game logic
@@ -225,41 +307,25 @@ export class Game {
       this.accumulator -= this.FIXED_TIMESTEP;
     }
 
-    // Update terrain once per frame (not in fixedUpdate to avoid cascade)
-    const mechPosition = this.playerMech.getPosition();
-    this.terrainGenerator.generateAroundPosition(mechPosition);
-
     // Variable timestep rendering
     const alpha = this.accumulator / this.FIXED_TIMESTEP;
     this.render(alpha);
   }
 
   private fixedUpdate(dt: number): void {
-    // Update input
-    this.inputManager.update();
-
-    // Update mech controller
-    this.mechController.update(dt);
-
-    // Update physics
-    this.physicsWorld.step(dt);
-
-    // Update day/night cycle
-    this.dayNightCycle.update(dt);
-
-    // Update all entities
-    this.entityManager.update(dt);
-
-    // Update camera
-    this.cameraController.update(dt);
+    // Update all systems via the world
+    this.world.update(dt);
   }
 
   private render(alpha: number): void {
     // Update HUD
     this.hud.update();
 
-    // Interpolate camera for smooth rendering
-    this.cameraController.interpolate(alpha);
+    // Interpolate render positions
+    this.renderSystem.interpolate(alpha);
+
+    // Interpolate camera
+    this.cameraSystem.interpolate(alpha);
 
     // Render with post processing
     this.postProcessing.render();
@@ -275,5 +341,19 @@ export class Game {
     this.renderer.setSize(width, height);
     this.postProcessing.resize(width, height);
     this.hud.resize();
+  }
+
+  /**
+   * Get the ECS world
+   */
+  getWorld(): World {
+    return this.world;
+  }
+
+  /**
+   * Get player entity
+   */
+  getPlayer(): Entity {
+    return this.playerEntity;
   }
 }

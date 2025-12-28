@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { Skybox } from './Skybox';
+import { System } from '../core/System';
+import type { ComponentClass } from '../core/Component';
+import type { Skybox } from '../world/Skybox';
 
 // Full day/night cycle: dawn -> morning -> midday -> afternoon -> dusk -> twilight -> night -> predawn -> dawn
 type TimePhase =
@@ -23,93 +25,98 @@ interface PhaseColors {
   ambientIntensity: number;
 }
 
-export class DayNightCycle {
+/**
+ * Day/night cycle system manages lighting and sky colors.
+ */
+export class DayNightSystem extends System {
+  readonly requiredComponents: ComponentClass[] = []; // Operates on scene, not entities
+
+  private scene: THREE.Scene;
   private skybox: Skybox;
   private sunLight: THREE.DirectionalLight;
   private ambientLight: THREE.AmbientLight;
   private hemiLight: THREE.HemisphereLight;
-  private scene: THREE.Scene;
 
-  private timeOfDay: number = 0; // 0-1, full day cycle starting at dawn
-  private cycleSpeed: number = 0.00056; // Full cycle in ~30 minutes (1/1800)
+  private timeOfDay: number = 0;
+  private cycleSpeed: number = 0.00056; // Full cycle in ~30 minutes
 
   // Color palettes for full day/night cycle
   private phases: Record<TimePhase, PhaseColors> = {
     dawn: {
-      skyTop: new THREE.Color(0x4488cc), // Soft blue
-      skyHorizon: new THREE.Color(0xffaa77), // Orange-pink sunrise
-      skyBottom: new THREE.Color(0xccaa88), // Warm earth
-      sunColor: new THREE.Color(0xffd4a0), // Warm golden
+      skyTop: new THREE.Color(0x4488cc),
+      skyHorizon: new THREE.Color(0xffaa77),
+      skyBottom: new THREE.Color(0xccaa88),
+      sunColor: new THREE.Color(0xffd4a0),
       ambientColor: new THREE.Color(0xccbbdd),
       fogColor: new THREE.Color(0xddbb99),
       sunIntensity: 3.5,
       ambientIntensity: 1.5,
     },
     morning: {
-      skyTop: new THREE.Color(0x4499dd), // Clear blue
-      skyHorizon: new THREE.Color(0x99ccee), // Light blue horizon
-      skyBottom: new THREE.Color(0xaabb99), // Green-tinted ground
-      sunColor: new THREE.Color(0xfff8e8), // Warm white
+      skyTop: new THREE.Color(0x4499dd),
+      skyHorizon: new THREE.Color(0x99ccee),
+      skyBottom: new THREE.Color(0xaabb99),
+      sunColor: new THREE.Color(0xfff8e8),
       ambientColor: new THREE.Color(0xddeeff),
       fogColor: new THREE.Color(0xccddee),
       sunIntensity: 4.5,
       ambientIntensity: 1.8,
     },
     midday: {
-      skyTop: new THREE.Color(0x3388dd), // Vibrant blue
-      skyHorizon: new THREE.Color(0x88bbdd), // Bright horizon
-      skyBottom: new THREE.Color(0xbbcc99), // Sunlit ground
-      sunColor: new THREE.Color(0xffffff), // Pure white sun
+      skyTop: new THREE.Color(0x3388dd),
+      skyHorizon: new THREE.Color(0x88bbdd),
+      skyBottom: new THREE.Color(0xbbcc99),
+      sunColor: new THREE.Color(0xffffff),
       ambientColor: new THREE.Color(0xeeffff),
       fogColor: new THREE.Color(0xddeeee),
       sunIntensity: 5.5,
       ambientIntensity: 2.2,
     },
     afternoon: {
-      skyTop: new THREE.Color(0x5599cc), // Softening blue
-      skyHorizon: new THREE.Color(0xaaccdd), // Hazy horizon
-      skyBottom: new THREE.Color(0xccbb99), // Warm ground
-      sunColor: new THREE.Color(0xffeedd), // Slightly warm
+      skyTop: new THREE.Color(0x5599cc),
+      skyHorizon: new THREE.Color(0xaaccdd),
+      skyBottom: new THREE.Color(0xccbb99),
+      sunColor: new THREE.Color(0xffeedd),
       ambientColor: new THREE.Color(0xddeedd),
       fogColor: new THREE.Color(0xccccbb),
       sunIntensity: 4.5,
       ambientIntensity: 1.8,
     },
     dusk: {
-      skyTop: new THREE.Color(0x6677aa), // Deepening blue
-      skyHorizon: new THREE.Color(0xff9966), // Orange sunset
-      skyBottom: new THREE.Color(0xaa8877), // Warm shadows
-      sunColor: new THREE.Color(0xffaa66), // Deep orange
+      skyTop: new THREE.Color(0x6677aa),
+      skyHorizon: new THREE.Color(0xff9966),
+      skyBottom: new THREE.Color(0xaa8877),
+      sunColor: new THREE.Color(0xffaa66),
       ambientColor: new THREE.Color(0xddccbb),
       fogColor: new THREE.Color(0xbb9988),
       sunIntensity: 3.0,
       ambientIntensity: 1.4,
     },
     twilight: {
-      skyTop: new THREE.Color(0x334477), // Deep blue
-      skyHorizon: new THREE.Color(0x886699), // Purple glow
-      skyBottom: new THREE.Color(0x665566), // Shadowed ground
-      sunColor: new THREE.Color(0xcc99bb), // Fading pink
+      skyTop: new THREE.Color(0x334477),
+      skyHorizon: new THREE.Color(0x886699),
+      skyBottom: new THREE.Color(0x665566),
+      sunColor: new THREE.Color(0xcc99bb),
       ambientColor: new THREE.Color(0x9999aa),
       fogColor: new THREE.Color(0x776688),
       sunIntensity: 1.5,
       ambientIntensity: 1.0,
     },
     night: {
-      skyTop: new THREE.Color(0x112244), // Dark blue
-      skyHorizon: new THREE.Color(0x223355), // Slightly lighter horizon
-      skyBottom: new THREE.Color(0x222233), // Dark ground
-      sunColor: new THREE.Color(0x8899bb), // Moonlight blue
+      skyTop: new THREE.Color(0x112244),
+      skyHorizon: new THREE.Color(0x223355),
+      skyBottom: new THREE.Color(0x222233),
+      sunColor: new THREE.Color(0x8899bb),
       ambientColor: new THREE.Color(0x445566),
       fogColor: new THREE.Color(0x223344),
       sunIntensity: 0.8,
       ambientIntensity: 0.6,
     },
     predawn: {
-      skyTop: new THREE.Color(0x223355), // Lightening dark blue
-      skyHorizon: new THREE.Color(0x664466), // Early purple
-      skyBottom: new THREE.Color(0x443344), // Dark ground
-      sunColor: new THREE.Color(0xaa8899), // Cool pink
+      skyTop: new THREE.Color(0x223355),
+      skyHorizon: new THREE.Color(0x664466),
+      skyBottom: new THREE.Color(0x443344),
+      sunColor: new THREE.Color(0xaa8899),
       ambientColor: new THREE.Color(0x667788),
       fogColor: new THREE.Color(0x445555),
       sunIntensity: 1.2,
@@ -124,19 +131,19 @@ export class DayNightCycle {
     ambientLight: THREE.AmbientLight,
     hemiLight: THREE.HemisphereLight
   ) {
+    super();
     this.scene = scene;
     this.skybox = skybox;
     this.sunLight = sunLight;
     this.ambientLight = ambientLight;
     this.hemiLight = hemiLight;
+  }
 
-    // Start at dawn
-    this.timeOfDay = 0;
+  init(): void {
     this.updateLighting();
   }
 
   update(dt: number): void {
-    // Advance time
     this.timeOfDay += dt * this.cycleSpeed;
     if (this.timeOfDay >= 1) {
       this.timeOfDay -= 1;
@@ -146,7 +153,6 @@ export class DayNightCycle {
   }
 
   private updateLighting(): void {
-    // Determine current phase and blend factor
     const { phase1, phase2, blend } = this.getPhaseBlend();
     const colors1 = this.phases[phase1];
     const colors2 = this.phases[phase2];
@@ -290,7 +296,6 @@ export class DayNightCycle {
     return t * t * (3 - 2 * t);
   }
 
-  // Set time manually (0-1)
   setTime(time: number): void {
     this.timeOfDay = time % 1;
     this.updateLighting();
@@ -300,7 +305,6 @@ export class DayNightCycle {
     return this.timeOfDay;
   }
 
-  // Adjust cycle speed (lower = slower)
   setCycleSpeed(speed: number): void {
     this.cycleSpeed = speed;
   }

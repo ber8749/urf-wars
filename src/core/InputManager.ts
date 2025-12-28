@@ -10,16 +10,16 @@ export class InputManager {
   private mouseButtons: Map<number, boolean> = new Map();
   private weaponSlot: number = 1;
   private isLocked: boolean = false;
-  
+
   // For network - stores the last snapshot
   private currentSnapshot: InputSnapshot;
-  
+
   constructor(container: HTMLElement) {
     this.container = container;
     this.currentSnapshot = this.createEmptySnapshot();
     this.setupEventListeners();
   }
-  
+
   private createEmptySnapshot(): InputSnapshot {
     return {
       timestamp: performance.now(),
@@ -34,7 +34,6 @@ export class InputManager {
       lookUp: false,
       lookDown: false,
       // Actions
-      jump: false,
       fire: false,
       altFire: false,
       // Mouse
@@ -45,17 +44,20 @@ export class InputManager {
       weaponSlot: 1,
     };
   }
-  
+
   private setupEventListeners(): void {
     // Keyboard events
     window.addEventListener('keydown', this.onKeyDown.bind(this));
     window.addEventListener('keyup', this.onKeyUp.bind(this));
-    
+
     // Mouse events
     window.addEventListener('mousemove', this.onMouseMove.bind(this));
     window.addEventListener('mousedown', this.onMouseDown.bind(this));
     window.addEventListener('mouseup', this.onMouseUp.bind(this));
-    
+    window.addEventListener('wheel', this.onWheel.bind(this), {
+      passive: false,
+    });
+
     // Pointer lock - only request on user click (required by browsers)
     this.container.addEventListener('click', () => {
       if (!this.isLocked) {
@@ -64,10 +66,10 @@ export class InputManager {
         });
       }
     });
-    
+
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.container;
-      
+
       // Hide/show click prompt
       const prompt = document.getElementById('click-prompt');
       if (prompt) {
@@ -75,20 +77,20 @@ export class InputManager {
       }
     });
   }
-  
+
   private onKeyDown(event: KeyboardEvent): void {
     this.keys.set(event.code, true);
-    
+
     // Weapon slot selection
     if (event.code >= 'Digit1' && event.code <= 'Digit4') {
       this.weaponSlot = parseInt(event.code.replace('Digit', ''));
     }
   }
-  
+
   private onKeyUp(event: KeyboardEvent): void {
     this.keys.set(event.code, false);
   }
-  
+
   private onMouseMove(event: MouseEvent): void {
     if (this.isLocked) {
       this.mouseDeltaX += event.movementX;
@@ -97,30 +99,51 @@ export class InputManager {
     this.mouseX = event.clientX;
     this.mouseY = event.clientY;
   }
-  
+
   private onMouseDown(event: MouseEvent): void {
     this.mouseButtons.set(event.button, true);
   }
-  
+
   private onMouseUp(event: MouseEvent): void {
     this.mouseButtons.set(event.button, false);
   }
-  
+
+  private onWheel(event: WheelEvent): void {
+    if (!this.isLocked) return;
+
+    // Prevent page scrolling
+    event.preventDefault();
+
+    // Cycle weapon slots (1-4)
+    const minSlot = 1;
+    const maxSlot = 4;
+
+    if (event.deltaY < 0) {
+      // Scroll up - next weapon
+      this.weaponSlot =
+        this.weaponSlot >= maxSlot ? minSlot : this.weaponSlot + 1;
+    } else if (event.deltaY > 0) {
+      // Scroll down - previous weapon
+      this.weaponSlot =
+        this.weaponSlot <= minSlot ? maxSlot : this.weaponSlot - 1;
+    }
+  }
+
   lock(): void {
     // Only works after user gesture
     this.container.requestPointerLock().catch(() => {
       // Silently fail - pointer lock requires user gesture
     });
   }
-  
+
   unlock(): void {
     document.exitPointerLock();
   }
-  
+
   isPointerLocked(): boolean {
     return this.isLocked;
   }
-  
+
   // Call once per fixed update
   update(): void {
     this.currentSnapshot = {
@@ -135,9 +158,8 @@ export class InputManager {
       torsoRight: this.keys.get('ArrowRight') || false,
       lookUp: this.keys.get('ArrowUp') || false,
       lookDown: this.keys.get('ArrowDown') || false,
-      // Actions
-      jump: this.keys.get('Space') || false,
-      fire: this.mouseButtons.get(0) || false,
+      // Actions (Space or Left Click to fire)
+      fire: this.mouseButtons.get(0) || this.keys.get('Space') || false,
       altFire: this.mouseButtons.get(2) || false,
       // Mouse
       mouseX: this.mouseX,
@@ -146,36 +168,35 @@ export class InputManager {
       mouseDeltaY: this.mouseDeltaY,
       weaponSlot: this.weaponSlot,
     };
-    
+
     // Reset mouse delta after capturing
     this.mouseDeltaX = 0;
     this.mouseDeltaY = 0;
   }
-  
+
   getSnapshot(): InputSnapshot {
     return { ...this.currentSnapshot };
   }
-  
+
   // Direct key checks for non-networked actions
   isKeyPressed(code: string): boolean {
     return this.keys.get(code) || false;
   }
-  
+
   isKeyJustPressed(code: string): boolean {
     // For edge detection, we'd need previous frame state
     // For now, just return current state
     return this.keys.get(code) || false;
   }
-  
+
   getMouseDelta(): { x: number; y: number } {
     return {
       x: this.currentSnapshot.mouseDeltaX,
       y: this.currentSnapshot.mouseDeltaY,
     };
   }
-  
+
   dispose(): void {
     this.unlock();
   }
 }
-

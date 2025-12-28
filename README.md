@@ -5,7 +5,7 @@ A 3D mech combat game built with Three.js, inspired by classic titles like MechW
 ## Features
 
 - **Procedural Terrain**: Infinite chunked terrain with multiple biomes (Desert, Tundra, Volcanic, Forest, Badlands)
-- **Mech Simulation**: 
+- **Mech Simulation**:
   - Armor zones (head, torso, arms, legs)
   - Heat management system
   - Multiple weapon hardpoints (lasers, PPC, missiles)
@@ -16,15 +16,16 @@ A 3D mech combat game built with Three.js, inspired by classic titles like MechW
 
 ## Controls
 
-| Key | Action |
-|-----|--------|
-| W/A/S/D | Move mech |
-| Mouse | Aim torso/camera |
-| Left Click | Fire selected weapon |
-| 1-4 | Select weapon group |
-| V | Toggle camera view |
-| Space | Jump jets |
-| Tab | Toggle HUD |
+| Key                | Action                                  |
+| ------------------ | --------------------------------------- |
+| W/S                | Move forward/backward                   |
+| A/D                | Turn left/right                         |
+| Arrow Keys         | Rotate torso (←/→) and pitch head (↑/↓) |
+| Mouse              | Aim torso/head                          |
+| Left Click / Space | Fire selected weapon                    |
+| 1-4                | Select weapon group                     |
+| V                  | Toggle camera view (first/third person) |
+| Tab                | Toggle HUD visibility                   |
 
 ## Getting Started
 
@@ -50,18 +51,21 @@ npm run build
 
 ```
 src/
-├── core/           # Game loop, entity management, input
-├── mech/           # Mech model, controller, weapons, heat
-├── world/          # Terrain generation, biomes, skybox
-├── camera/         # First/third person camera system
-├── rendering/      # HUD, post-processing, shaders
+├── core/           # Game loop, ECS (Entity, Component, System, World), EventBus, input
+├── components/     # ECS data components (Transform, Physics, Mech, Weapon, Heat, etc.)
+├── systems/        # ECS logic systems (Movement, Physics, Weapon, Render, Camera, etc.)
+├── archetypes/     # Entity factory functions (createMech, createProjectile)
+├── config/         # Game configuration (MechConfigs, WeaponConfigs)
+├── rendering/      # Visual components (MechModel, HUD, PostProcessing, shaders)
+├── world/          # Terrain generation, biomes, skybox, day/night cycle
+├── audio/          # Sound manager and procedural synths
 ├── physics/        # Rapier3D wrapper
 └── network/        # Multiplayer stubs (future)
 ```
 
 ## Architecture
 
-The game uses an ECS-lite architecture with deterministic state updates, designed for future multiplayer support:
+The game uses an Entity-Component-System (ECS) architecture with deterministic state updates, designed for future multiplayer support:
 
 - Fixed timestep physics (60Hz)
 - Input snapshots for client-side prediction
@@ -71,9 +75,7 @@ The game uses an ECS-lite architecture with deterministic state updates, designe
 ## Acknowledgments
 
 Inspired by:
+
 - MechWarrior 2 (1995)
 - Earth Siege (1994)
 - The retro 3D aesthetic of 90s mech games
-
-
-

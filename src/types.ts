@@ -28,7 +28,7 @@ export interface Entity {
   id: string;
   type: EntityType;
   mesh: THREE.Object3D | null;
-  
+
   update(dt: number): void;
   dispose(): void;
 }
@@ -47,7 +47,6 @@ export interface InputSnapshot {
   lookUp: boolean;
   lookDown: boolean;
   // Actions
-  jump: boolean;
   fire: boolean;
   altFire: boolean;
   // Mouse
@@ -74,7 +73,6 @@ export interface MechConfig {
   turnRate: number;
   torsoTurnRate: number;
   mass: number;
-  jumpJetForce: number;
   maxHeat: number;
   heatDissipation: number;
   baseArmor: ArmorZones;
@@ -97,6 +95,8 @@ export interface WeaponConfig {
   projectileSpeed: number;
   range: number;
   ammo?: number;
+  /** If true, weapon only fires once per button press (not continuous) */
+  semiAuto?: boolean;
 }
 
 // Terrain types
@@ -136,4 +136,3 @@ export interface WeaponState {
   cooldownRemaining: number;
   ammo?: number;
 }
-
