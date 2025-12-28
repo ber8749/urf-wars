@@ -241,12 +241,8 @@ export class WeaponSystem extends System {
     this._aimDirection.set(0, 0, 1);
 
     if (mech) {
-      // Use torso rotation with mesh flip compensation
-      this._torsoRotation.set(
-        -mech.headPitch,
-        transform.rotation.y + mech.torsoYaw + Math.PI,
-        0
-      );
+      // Use torso world rotation with mesh flip compensation
+      this._torsoRotation.set(-mech.headPitch, mech.torsoYaw + Math.PI, 0);
       this._aimDirection.applyEuler(this._torsoRotation);
     } else {
       this._aimDirection.applyEuler(transform.rotation);

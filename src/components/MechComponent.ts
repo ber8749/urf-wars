@@ -12,7 +12,7 @@ export class MechComponent implements Component {
   /** Mech configuration */
   config: MechConfig;
 
-  /** Current torso yaw rotation relative to legs (radians) */
+  /** Current torso yaw in world coordinates (radians) - independent of leg rotation */
   torsoYaw: number = 0;
 
   /** Current head pitch (radians) */
@@ -29,7 +29,7 @@ export class MechComponent implements Component {
   }
 
   /**
-   * Rotate the torso by a delta amount
+   * Rotate the torso by a delta amount (in world space)
    */
   rotateTorso(yawDelta: number, pitchDelta: number): void {
     // Allow full 360-degree torso rotation, normalize to -π to π
@@ -40,13 +40,5 @@ export class MechComponent implements Component {
     // Clamp head pitch
     this.headPitch += pitchDelta;
     this.headPitch = Math.max(-0.4, Math.min(0.3, this.headPitch));
-  }
-
-  /**
-   * Get the combined world rotation for the torso
-   * @param baseRotationY The Y rotation of the physics body/legs
-   */
-  getTorsoWorldYaw(baseRotationY: number): number {
-    return baseRotationY + this.torsoYaw + Math.PI;
   }
 }

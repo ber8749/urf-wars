@@ -183,13 +183,9 @@ export class CameraSystem extends System {
     mech: MechComponent,
     out: THREE.Vector3
   ): void {
-    // Look direction based on torso/head rotation
+    // Look direction based on torso/head rotation (torsoYaw is world orientation)
     this._forward.set(0, 0, 1);
-    this._torsoRotation.set(
-      -mech.headPitch,
-      transform.rotation.y + mech.torsoYaw + Math.PI,
-      0
-    );
+    this._torsoRotation.set(-mech.headPitch, mech.torsoYaw + Math.PI, 0);
     this._forward.applyEuler(this._torsoRotation);
 
     out.copy(position).add(this._forward.multiplyScalar(100));
@@ -200,14 +196,14 @@ export class CameraSystem extends System {
     mech: MechComponent,
     out: THREE.Vector3
   ): void {
-    // Camera locked directly behind torso
-    const combinedYaw = transform.rotation.y + mech.torsoYaw;
+    // Camera locked directly behind torso (torsoYaw is world orientation)
+    const torsoWorldYaw = mech.torsoYaw;
 
     // Calculate ideal camera position behind the mech
     this._idealOffset.set(
-      Math.sin(combinedYaw) * this.distance,
+      Math.sin(torsoWorldYaw) * this.distance,
       this.height,
-      Math.cos(combinedYaw) * this.distance
+      Math.cos(torsoWorldYaw) * this.distance
     );
 
     out.copy(transform.position).add(this._idealOffset);
@@ -218,7 +214,8 @@ export class CameraSystem extends System {
     mech: MechComponent,
     out: THREE.Vector3
   ): void {
-    const combinedYaw = transform.rotation.y + mech.torsoYaw;
+    // torsoYaw is world orientation
+    const torsoWorldYaw = mech.torsoYaw;
 
     // Look at a point in front of the mech, adjusted by head pitch
     const lookDistance = 50;
@@ -226,9 +223,9 @@ export class CameraSystem extends System {
     out.y += this.lookAtHeight;
 
     // Apply head pitch to look target
-    out.x -= Math.sin(combinedYaw) * Math.cos(mech.headPitch) * lookDistance;
+    out.x -= Math.sin(torsoWorldYaw) * Math.cos(mech.headPitch) * lookDistance;
     out.y += Math.sin(mech.headPitch) * lookDistance;
-    out.z -= Math.cos(combinedYaw) * Math.cos(mech.headPitch) * lookDistance;
+    out.z -= Math.cos(torsoWorldYaw) * Math.cos(mech.headPitch) * lookDistance;
   }
 
   /**

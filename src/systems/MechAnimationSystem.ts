@@ -42,8 +42,10 @@ export class MechAnimationSystem extends System {
         model.resetPose?.();
       }
 
-      // Update torso and head rotation
-      model.setTorsoRotation?.(mech.torsoYaw);
+      // Pass world torso yaw + PI (for mesh flip compensation) to model
+      // Model uses quaternions internally to avoid gimbal lock
+      const torsoWorldYaw = mech.torsoYaw + Math.PI;
+      model.setTorsoRotation?.(torsoWorldYaw);
       model.setHeadPitch?.(mech.headPitch);
     }
   }

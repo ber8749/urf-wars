@@ -385,9 +385,24 @@ export class MechModel {
     return group;
   }
 
-  // Animation methods
-  setTorsoRotation(yaw: number): void {
-    this.torsoGroup.rotation.y = yaw;
+  // Animation methods - use quaternions to avoid gimbal lock
+  setTorsoRotation(worldYaw: number): void {
+    // Create desired world quaternion for torso (Y-axis rotation)
+    const desiredWorldQuat = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      worldYaw
+    );
+
+    // Get parent's (mesh) world quaternion
+    const parentWorldQuat = new THREE.Quaternion();
+    this.mesh.getWorldQuaternion(parentWorldQuat);
+
+    // Compute local quaternion: local = parentInverse * desired
+    const parentInverse = parentWorldQuat.clone().invert();
+    const localQuat = parentInverse.clone().multiply(desiredWorldQuat);
+
+    // Apply to torso using quaternion (avoids gimbal lock)
+    this.torsoGroup.quaternion.copy(localQuat);
   }
 
   setHeadPitch(pitch: number): void {
