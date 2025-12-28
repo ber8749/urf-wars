@@ -15,10 +15,10 @@ export class DebugTerrainSystem extends System {
   private initialized: boolean = false;
 
   // Configuration
-  private readonly groundSize: number = 500;
+  private readonly groundSize: number = 1000;
   private readonly majorGridSpacing: number = 50;
   private readonly minorGridSpacing: number = 10;
-  private readonly markerDistance: number = 200;
+  private readonly markerDistance: number = 400;
 
   constructor(scene: THREE.Scene, physicsWorld: PhysicsWorld) {
     super();
@@ -215,7 +215,7 @@ export class DebugTerrainSystem extends System {
   }
 
   private createDistanceMarkers(): void {
-    const distances = [50, 100, 150, 200];
+    const distances = [50, 100, 150, 200, 300, 400];
 
     for (const distance of distances) {
       // Create ring at this distance
@@ -238,7 +238,12 @@ export class DebugTerrainSystem extends System {
       this.scene.add(ring);
 
       // Add distance label at cardinal points
-      if (distance === 100 || distance === 200) {
+      if (
+        distance === 100 ||
+        distance === 200 ||
+        distance === 300 ||
+        distance === 400
+      ) {
         const labelPositions = [
           new THREE.Vector3(distance, 0, 0),
           new THREE.Vector3(-distance, 0, 0),
