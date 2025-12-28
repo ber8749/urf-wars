@@ -1,10 +1,47 @@
-import type { Mech } from '../mech/Mech';
+// Interface for the mech data provider (works with both Mech class and ECS entity wrapper)
+interface HeatSystemInterface {
+  getCurrentHeat(): number;
+  getMaxHeat(): number;
+  isOverheated(): boolean;
+}
+
+interface WeaponSystemInterface {
+  getSelectedSlot(): number;
+  getWeapons(): Array<{
+    slot: number;
+    config: { type: string };
+    cooldownRemaining: number;
+    ammo?: number;
+  }>;
+}
+
+interface CameraControllerInterface {
+  isFirstPerson(): boolean;
+}
+
+interface ArmorStatus {
+  head: number;
+  torso: number;
+  leftArm: number;
+  rightArm: number;
+  leftLeg: number;
+  rightLeg: number;
+}
+
+interface MechDataProvider {
+  getHeatSystem(): HeatSystemInterface;
+  getSpeed(): number;
+  getMaxSpeed(): number;
+  getWeaponSystem(): WeaponSystemInterface;
+  getArmorStatus(): ArmorStatus;
+  getCameraController?(): CameraControllerInterface;
+}
 
 export class HUD {
   private container: HTMLElement;
-  private mech: Mech;
+  private mechData: MechDataProvider;
   private hudElement: HTMLElement;
-  
+
   // HUD elements
   private heatBar!: HTMLElement;
   private heatValue!: HTMLElement;
@@ -12,15 +49,16 @@ export class HUD {
   private armorDisplay!: HTMLElement;
   private weaponDisplay!: HTMLElement;
   private warningText!: HTMLElement;
-  
+
   private isVisible: boolean = true;
-  
-  constructor(container: HTMLElement, mech: Mech) {
+  private lastHeatWarningState: boolean = false;
+
+  constructor(container: HTMLElement, mechData: MechDataProvider) {
     this.container = container;
-    this.mech = mech;
+    this.mechData = mechData;
     this.hudElement = this.createHUD();
     this.container.appendChild(this.hudElement);
-    
+
     // Setup visibility toggle
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Tab') {
@@ -28,13 +66,8 @@ export class HUD {
         this.toggleVisibility();
       }
     });
-    
-    // Setup heat warning callbacks
-    this.mech.heatSystem.onWarning = () => this.showWarning('HEAT WARNING');
-    this.mech.heatSystem.onOverheat = () => this.showWarning('EMERGENCY SHUTDOWN');
-    this.mech.heatSystem.onCooldown = () => this.hideWarning();
   }
-  
+
   private createHUD(): HTMLElement {
     const hud = document.createElement('div');
     hud.id = 'hud';
@@ -331,13 +364,13 @@ export class HUD {
       
       <div class="scanlines"></div>
     `;
-    
+
     return hud;
   }
-  
+
   update(): void {
     if (!this.isVisible) return;
-    
+
     // Cache DOM references on first update
     if (!this.heatBar) {
       this.heatBar = this.hudElement.querySelector('#heat-bar')!;
@@ -347,47 +380,61 @@ export class HUD {
       this.weaponDisplay = this.hudElement.querySelector('#weapon-display')!;
       this.warningText = this.hudElement.querySelector('#warning-text')!;
     }
-    
+
     // Update heat
-    const heatPercent = this.mech.heatSystem.getHeatPercentage();
+    const heatSystem = this.mechData.getHeatSystem();
+    const heatPercent =
+      (heatSystem.getCurrentHeat() / heatSystem.getMaxHeat()) * 100;
     this.heatBar.style.width = `${heatPercent}%`;
     this.heatValue.textContent = `${Math.round(heatPercent)}%`;
-    
+
     // Color heat bar based on level
     if (heatPercent > 80) {
       this.heatBar.style.background = '#ff4400';
     } else if (heatPercent > 60) {
-      this.heatBar.style.background = 'linear-gradient(90deg, #00ff88, #ffff00, #ff4400)';
+      this.heatBar.style.background =
+        'linear-gradient(90deg, #00ff88, #ffff00, #ff4400)';
     } else {
-      this.heatBar.style.background = 'linear-gradient(90deg, #00ff88, #ffff00)';
+      this.heatBar.style.background =
+        'linear-gradient(90deg, #00ff88, #ffff00)';
     }
-    
+
+    // Handle heat warning display
+    const isOverheated = heatSystem.isOverheated();
+    const isWarning = heatPercent >= 70;
+
+    if (isOverheated && !this.lastHeatWarningState) {
+      this.showWarning('EMERGENCY SHUTDOWN');
+    } else if (isWarning && !isOverheated && !this.lastHeatWarningState) {
+      this.showWarning('HEAT WARNING');
+    } else if (!isWarning && !isOverheated && this.lastHeatWarningState) {
+      this.hideWarning();
+    }
+    this.lastHeatWarningState = isWarning || isOverheated;
+
     // Update speed (convert to KPH-ish units)
-    const speed = Math.round(this.mech.getSpeed() * 3.6);
+    const speed = Math.round(this.mechData.getSpeed() * 3.6);
     this.speedValue.textContent = speed.toString();
-    
+
     // Update armor
     this.updateArmorDisplay();
-    
+
     // Update weapons
     this.updateWeaponDisplay();
   }
-  
+
   private updateArmorDisplay(): void {
-    const armor = this.mech.getArmor();
-    const baseArmor = this.mech.getBaseArmor();
-    
+    const armor = this.mechData.getArmorStatus();
+
     const zones = this.armorDisplay.querySelectorAll('.armor-zone');
     zones.forEach((zone) => {
-      const zoneName = zone.getAttribute('data-zone') as keyof typeof armor;
+      const zoneName = zone.getAttribute('data-zone') as keyof ArmorStatus;
       if (!zoneName) return;
-      
-      const current = armor[zoneName];
-      const max = baseArmor[zoneName];
-      const percent = (current / max) * 100;
-      
+
+      const percent = armor[zoneName];
+
       zone.classList.remove('armor-ok', 'armor-damaged', 'armor-critical');
-      
+
       if (percent > 50) {
         zone.classList.add('armor-ok');
       } else if (percent > 25) {
@@ -395,31 +442,32 @@ export class HUD {
       } else {
         zone.classList.add('armor-critical');
       }
-      
+
       zone.textContent = `${Math.round(percent)}`;
     });
   }
-  
+
   private updateWeaponDisplay(): void {
-    const weapons = this.mech.weaponSystem.getAllWeapons();
-    const selectedSlot = this.mech.weaponSystem.getSelectedSlot();
-    
+    const weaponSystem = this.mechData.getWeaponSystem();
+    const weapons = weaponSystem.getWeapons();
+    const selectedSlot = weaponSystem.getSelectedSlot();
+
     let html = '';
     for (const weapon of weapons) {
       const isSelected = weapon.slot === selectedSlot;
       const isOnCooldown = weapon.cooldownRemaining > 0;
-      
+
       let statusText = 'RDY';
       if (isOnCooldown) {
         statusText = weapon.cooldownRemaining.toFixed(1);
       } else if (weapon.ammo !== undefined && weapon.ammo <= 0) {
         statusText = 'EMPTY';
       }
-      
+
       const classes = ['weapon-slot'];
       if (isSelected) classes.push('selected');
       if (isOnCooldown) classes.push('cooldown');
-      
+
       html += `
         <div class="${classes.join(' ')}">
           <span class="weapon-name">${weapon.slot}: ${weapon.config.type}</span>
@@ -427,24 +475,24 @@ export class HUD {
         </div>
       `;
     }
-    
+
     this.weaponDisplay.innerHTML = html;
   }
-  
+
   showWarning(message: string): void {
     this.warningText.textContent = message;
     this.warningText.style.display = 'block';
   }
-  
+
   hideWarning(): void {
     this.warningText.style.display = 'none';
   }
-  
+
   toggleVisibility(): void {
     this.isVisible = !this.isVisible;
     this.hudElement.style.display = this.isVisible ? 'block' : 'none';
   }
-  
+
   setFirstPersonMode(enabled: boolean): void {
     // Could show cockpit frame in first person
     const cockpitFrame = this.hudElement.querySelector('.cockpit-frame');
@@ -452,13 +500,12 @@ export class HUD {
       (cockpitFrame as HTMLElement).style.display = enabled ? 'block' : 'none';
     }
   }
-  
+
   resize(): void {
     // Handle HUD resize if needed
   }
-  
+
   dispose(): void {
     this.container.removeChild(this.hudElement);
   }
 }
-
