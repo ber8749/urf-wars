@@ -37,6 +37,7 @@ export class MechController {
     this.handleTorsoAim(dt);
     this.handleWeapons(dt);
     this.mech.updateRotation();
+    this.mech.updateWalkAnimation(dt);
   }
 
   private handleMovement(dt: number): void {
