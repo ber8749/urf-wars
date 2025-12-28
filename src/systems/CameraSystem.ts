@@ -35,6 +35,17 @@ export class CameraSystem extends System {
   private previousPosition: THREE.Vector3 = new THREE.Vector3();
   private previousTarget: THREE.Vector3 = new THREE.Vector3();
 
+  // Reusable objects to avoid per-frame allocations
+  private readonly _firstPersonPos = new THREE.Vector3();
+  private readonly _firstPersonTarget = new THREE.Vector3();
+  private readonly _thirdPersonPos = new THREE.Vector3();
+  private readonly _thirdPersonTarget = new THREE.Vector3();
+  private readonly _forward = new THREE.Vector3();
+  private readonly _torsoRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+  private readonly _idealOffset = new THREE.Vector3();
+  private readonly _interpPosition = new THREE.Vector3();
+  private readonly _interpTarget = new THREE.Vector3();
+
   constructor(camera: THREE.PerspectiveCamera) {
     super();
     this.camera = camera;
@@ -95,34 +106,51 @@ export class CameraSystem extends System {
     const mech = player.getComponent(MechComponent)!;
     const render = player.getComponent(RenderComponent);
 
-    // Calculate camera positions for both modes
-    const firstPersonPos = this.getFirstPersonPosition(transform, mech, render);
-    const firstPersonTarget = this.getFirstPersonTarget(
-      firstPersonPos,
+    // Calculate camera positions for both modes (using cached vectors)
+    this.getFirstPersonPosition(transform, mech, render, this._firstPersonPos);
+    this.getFirstPersonTarget(
+      this._firstPersonPos,
       transform,
-      mech
+      mech,
+      this._firstPersonTarget
     );
-    const thirdPersonPos = this.getThirdPersonPosition(transform, mech);
-    const thirdPersonTarget = this.getThirdPersonTarget(transform, mech);
+    this.getThirdPersonPosition(transform, mech, this._thirdPersonPos);
+    this.getThirdPersonTarget(transform, mech, this._thirdPersonTarget);
 
     // Apply transition or direct position
     if (this.isTransitioning) {
       const t = this.smoothstep(this.transitionProgress);
 
       if (this.currentMode === 'first-person') {
-        this.currentPosition.lerpVectors(thirdPersonPos, firstPersonPos, t);
-        this.currentTarget.lerpVectors(thirdPersonTarget, firstPersonTarget, t);
+        this.currentPosition.lerpVectors(
+          this._thirdPersonPos,
+          this._firstPersonPos,
+          t
+        );
+        this.currentTarget.lerpVectors(
+          this._thirdPersonTarget,
+          this._firstPersonTarget,
+          t
+        );
       } else {
-        this.currentPosition.lerpVectors(firstPersonPos, thirdPersonPos, t);
-        this.currentTarget.lerpVectors(firstPersonTarget, thirdPersonTarget, t);
+        this.currentPosition.lerpVectors(
+          this._firstPersonPos,
+          this._thirdPersonPos,
+          t
+        );
+        this.currentTarget.lerpVectors(
+          this._firstPersonTarget,
+          this._thirdPersonTarget,
+          t
+        );
       }
     } else {
       if (this.currentMode === 'first-person') {
-        this.currentPosition.copy(firstPersonPos);
-        this.currentTarget.copy(firstPersonTarget);
+        this.currentPosition.copy(this._firstPersonPos);
+        this.currentTarget.copy(this._firstPersonTarget);
       } else {
-        this.currentPosition.lerp(thirdPersonPos, 0.1);
-        this.currentTarget.lerp(thirdPersonTarget, 0.15);
+        this.currentPosition.lerp(this._thirdPersonPos, 0.1);
+        this.currentTarget.lerp(this._thirdPersonTarget, 0.15);
       }
     }
   }
@@ -130,101 +158,97 @@ export class CameraSystem extends System {
   private getFirstPersonPosition(
     transform: TransformComponent,
     mech: MechComponent,
-    render?: RenderComponent
-  ): THREE.Vector3 {
+    render: RenderComponent | undefined,
+    out: THREE.Vector3
+  ): void {
     // Get cockpit position from mech model if available
     if (render?.mesh) {
       const model = render.mesh as unknown as MechModel;
       if (model.getCockpitPosition) {
         const cockpitPos = model.getCockpitPosition();
-        cockpitPos.y += 0.2; // Small eye offset
-        return cockpitPos;
+        out.copy(cockpitPos);
+        out.y += 0.2; // Small eye offset
+        return;
       }
     }
 
     // Fallback: estimate cockpit position
-    const pos = transform.position.clone();
-    pos.y += 8; // Head height
-    return pos;
+    out.copy(transform.position);
+    out.y += 8; // Head height
   }
 
   private getFirstPersonTarget(
     position: THREE.Vector3,
     transform: TransformComponent,
-    mech: MechComponent
-  ): THREE.Vector3 {
+    mech: MechComponent,
+    out: THREE.Vector3
+  ): void {
     // Look direction based on torso/head rotation
-    const forward = new THREE.Vector3(0, 0, 1);
-    const torsoRotation = new THREE.Euler(
+    this._forward.set(0, 0, 1);
+    this._torsoRotation.set(
       -mech.headPitch,
       transform.rotation.y + mech.torsoYaw + Math.PI,
-      0,
-      'YXZ'
+      0
     );
-    forward.applyEuler(torsoRotation);
+    this._forward.applyEuler(this._torsoRotation);
 
-    return position.clone().add(forward.multiplyScalar(100));
+    out.copy(position).add(this._forward.multiplyScalar(100));
   }
 
   private getThirdPersonPosition(
     transform: TransformComponent,
-    mech: MechComponent
-  ): THREE.Vector3 {
-    const mechPos = transform.position.clone();
-
+    mech: MechComponent,
+    out: THREE.Vector3
+  ): void {
     // Camera locked directly behind torso
     const combinedYaw = transform.rotation.y + mech.torsoYaw;
 
     // Calculate ideal camera position behind the mech
-    const idealOffset = new THREE.Vector3(
+    this._idealOffset.set(
       Math.sin(combinedYaw) * this.distance,
       this.height,
       Math.cos(combinedYaw) * this.distance
     );
 
-    return mechPos.add(idealOffset);
+    out.copy(transform.position).add(this._idealOffset);
   }
 
   private getThirdPersonTarget(
     transform: TransformComponent,
-    mech: MechComponent
-  ): THREE.Vector3 {
-    const mechPos = transform.position.clone();
+    mech: MechComponent,
+    out: THREE.Vector3
+  ): void {
     const combinedYaw = transform.rotation.y + mech.torsoYaw;
 
     // Look at a point in front of the mech, adjusted by head pitch
     const lookDistance = 50;
-    const idealLookAt = mechPos.clone();
-    idealLookAt.y += this.lookAtHeight;
+    out.copy(transform.position);
+    out.y += this.lookAtHeight;
 
     // Apply head pitch to look target
-    idealLookAt.x -=
-      Math.sin(combinedYaw) * Math.cos(mech.headPitch) * lookDistance;
-    idealLookAt.y += Math.sin(mech.headPitch) * lookDistance;
-    idealLookAt.z -=
-      Math.cos(combinedYaw) * Math.cos(mech.headPitch) * lookDistance;
-
-    return idealLookAt;
+    out.x -= Math.sin(combinedYaw) * Math.cos(mech.headPitch) * lookDistance;
+    out.y += Math.sin(mech.headPitch) * lookDistance;
+    out.z -= Math.cos(combinedYaw) * Math.cos(mech.headPitch) * lookDistance;
   }
 
   /**
    * Interpolate camera position for smooth rendering
    */
   interpolate(alpha: number): void {
-    const position = new THREE.Vector3().lerpVectors(
+    this._interpPosition.lerpVectors(
       this.previousPosition,
       this.currentPosition,
       alpha
     );
 
-    const target = new THREE.Vector3().lerpVectors(
+    this._interpTarget.lerpVectors(
       this.previousTarget,
       this.currentTarget,
       alpha
     );
 
-    this.camera.position.copy(position);
-    this.camera.lookAt(target);
+    this.camera.position.copy(this._interpPosition);
+    this.camera.lookAt(this._interpTarget);
   }
 
   private smoothstep(t: number): number {

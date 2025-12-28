@@ -47,6 +47,10 @@ export class WeaponSystem extends System {
     maxLifetime: number;
   }> = [];
 
+  // Reusable objects to avoid per-frame allocations
+  private readonly _aimDirection = new THREE.Vector3();
+  private readonly _torsoRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+
   constructor(scene: THREE.Scene) {
     super();
     this.scene = scene;
@@ -234,22 +238,21 @@ export class WeaponSystem extends System {
     transform: TransformComponent,
     mech?: MechComponent
   ): THREE.Vector3 {
-    const direction = new THREE.Vector3(0, 0, 1);
+    this._aimDirection.set(0, 0, 1);
 
     if (mech) {
       // Use torso rotation with mesh flip compensation
-      const torsoRotation = new THREE.Euler(
+      this._torsoRotation.set(
         -mech.headPitch,
         transform.rotation.y + mech.torsoYaw + Math.PI,
-        0,
-        'YXZ'
+        0
       );
-      direction.applyEuler(torsoRotation);
+      this._aimDirection.applyEuler(this._torsoRotation);
     } else {
-      direction.applyEuler(transform.rotation);
+      this._aimDirection.applyEuler(transform.rotation);
     }
 
-    return direction;
+    return this._aimDirection;
   }
 
   private createLaserBeam(

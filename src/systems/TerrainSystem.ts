@@ -208,6 +208,12 @@ export class TerrainSystem extends System {
     const size = this.chunkSize;
     const heights = new Float32Array(size * size);
 
+    // Get biome once per chunk (all vertices use same biome for performance)
+    const chunkCenterX = (chunkX * size + size / 2) * this.chunkScale;
+    const chunkCenterZ = (chunkZ * size + size / 2) * this.chunkScale;
+    const biome = this.biomeManager.getBiomeAt(chunkCenterX, chunkCenterZ);
+    const heightScale = biome.heightScale;
+
     for (let z = 0; z < size; z++) {
       for (let x = 0; x < size; x++) {
         const worldX = (chunkX * size + x) * this.chunkScale;
@@ -219,8 +225,7 @@ export class TerrainSystem extends System {
         height += this.noise(worldX * 0.015, worldZ * 0.015) * 3;
         height += this.noise(worldX * 0.05, worldZ * 0.05) * 1;
 
-        const biome = this.biomeManager.getBiomeAt(worldX, worldZ);
-        height *= biome.heightScale;
+        height *= heightScale;
 
         heights[z * size + x] = height;
       }

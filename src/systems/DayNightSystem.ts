@@ -40,6 +40,15 @@ export class DayNightSystem extends System {
   private timeOfDay: number = 0;
   private cycleSpeed: number = 0.00056; // Full cycle in ~30 minutes
 
+  // Reusable objects to avoid per-frame allocations
+  private readonly _skyTop = new THREE.Color();
+  private readonly _skyHorizon = new THREE.Color();
+  private readonly _skyBottom = new THREE.Color();
+  private readonly _sunColor = new THREE.Color();
+  private readonly _ambientColor = new THREE.Color();
+  private readonly _fogColor = new THREE.Color();
+  private readonly _sunDirection = new THREE.Vector3();
+
   // Color palettes for full day/night cycle
   private phases: Record<TimePhase, PhaseColors> = {
     dawn: {
@@ -157,37 +166,17 @@ export class DayNightSystem extends System {
     const colors1 = this.phases[phase1];
     const colors2 = this.phases[phase2];
 
-    // Interpolate colors
-    const skyTop = new THREE.Color().lerpColors(
-      colors1.skyTop,
-      colors2.skyTop,
-      blend
-    );
-    const skyHorizon = new THREE.Color().lerpColors(
-      colors1.skyHorizon,
-      colors2.skyHorizon,
-      blend
-    );
-    const skyBottom = new THREE.Color().lerpColors(
-      colors1.skyBottom,
-      colors2.skyBottom,
-      blend
-    );
-    const sunColor = new THREE.Color().lerpColors(
-      colors1.sunColor,
-      colors2.sunColor,
-      blend
-    );
-    const ambientColor = new THREE.Color().lerpColors(
+    // Interpolate colors using reusable objects
+    this._skyTop.lerpColors(colors1.skyTop, colors2.skyTop, blend);
+    this._skyHorizon.lerpColors(colors1.skyHorizon, colors2.skyHorizon, blend);
+    this._skyBottom.lerpColors(colors1.skyBottom, colors2.skyBottom, blend);
+    this._sunColor.lerpColors(colors1.sunColor, colors2.sunColor, blend);
+    this._ambientColor.lerpColors(
       colors1.ambientColor,
       colors2.ambientColor,
       blend
     );
-    const fogColor = new THREE.Color().lerpColors(
-      colors1.fogColor,
-      colors2.fogColor,
-      blend
-    );
+    this._fogColor.lerpColors(colors1.fogColor, colors2.fogColor, blend);
 
     const sunIntensity = THREE.MathUtils.lerp(
       colors1.sunIntensity,
@@ -201,7 +190,7 @@ export class DayNightSystem extends System {
     );
 
     // Update skybox
-    this.skybox.setColors(skyTop, skyHorizon, skyBottom);
+    this.skybox.setColors(this._skyTop, this._skyHorizon, this._skyBottom);
 
     // Update sun direction (full arc across the sky)
     // timeOfDay 0-0.5 = day (sun rises and sets), 0.5-1.0 = night (moon)
@@ -222,34 +211,30 @@ export class DayNightSystem extends System {
     }
 
     const sunX = Math.cos(sunAngle);
-    const sunDirection = new THREE.Vector3(
-      sunX,
-      Math.max(sunHeight, 0.05),
-      0.3
-    ).normalize();
-    this.skybox.setSunDirection(sunDirection);
+    this._sunDirection.set(sunX, Math.max(sunHeight, 0.05), 0.3).normalize();
+    this.skybox.setSunDirection(this._sunDirection);
 
     // Update sun light
     this.sunLight.position.set(
-      sunDirection.x * 200,
-      sunDirection.y * 200,
-      sunDirection.z * 200
+      this._sunDirection.x * 200,
+      this._sunDirection.y * 200,
+      this._sunDirection.z * 200
     );
-    this.sunLight.color.copy(sunColor);
+    this.sunLight.color.copy(this._sunColor);
     this.sunLight.intensity = sunIntensity;
 
     // Update ambient light
-    this.ambientLight.color.copy(ambientColor);
+    this.ambientLight.color.copy(this._ambientColor);
     this.ambientLight.intensity = ambientIntensity;
 
     // Update hemisphere light
-    this.hemiLight.color.copy(skyTop);
-    this.hemiLight.groundColor.copy(skyBottom);
+    this.hemiLight.color.copy(this._skyTop);
+    this.hemiLight.groundColor.copy(this._skyBottom);
     this.hemiLight.intensity = ambientIntensity * 0.8;
 
     // Update fog
     if (this.scene.fog instanceof THREE.FogExp2) {
-      this.scene.fog.color.copy(fogColor);
+      this.scene.fog.color.copy(this._fogColor);
     }
   }
 

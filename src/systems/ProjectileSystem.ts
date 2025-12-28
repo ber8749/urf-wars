@@ -18,6 +18,9 @@ export class ProjectileSystem extends System {
 
   private scene: THREE.Scene;
 
+  // Reusable vector to avoid per-frame allocations
+  private readonly _movement = new THREE.Vector3();
+
   constructor(scene: THREE.Scene) {
     super();
     this.scene = scene;
@@ -32,10 +35,10 @@ export class ProjectileSystem extends System {
       // Store previous position for interpolation (prevents ghosting)
       transform.storePrevious();
 
-      // Move projectile
-      const movement = projectile.velocity.clone().multiplyScalar(dt);
-      transform.position.add(movement);
-      projectile.distanceTraveled += movement.length();
+      // Move projectile using cached vector
+      this._movement.copy(projectile.velocity).multiplyScalar(dt);
+      transform.position.add(this._movement);
+      projectile.distanceTraveled += this._movement.length();
 
       // Update mesh position (will be overwritten by RenderSystem.interpolate)
       render.mesh.position.copy(transform.position);
