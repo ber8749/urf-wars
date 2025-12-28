@@ -29,12 +29,15 @@ export class ProjectileSystem extends System {
       const transform = entity.getComponent(TransformComponent)!;
       const render = entity.getComponent(RenderComponent)!;
 
+      // Store previous position for interpolation (prevents ghosting)
+      transform.storePrevious();
+
       // Move projectile
       const movement = projectile.velocity.clone().multiplyScalar(dt);
       transform.position.add(movement);
       projectile.distanceTraveled += movement.length();
 
-      // Update mesh position
+      // Update mesh position (will be overwritten by RenderSystem.interpolate)
       render.mesh.position.copy(transform.position);
 
       // Check if out of range

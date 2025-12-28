@@ -194,8 +194,8 @@ export class WeaponSystem extends System {
 
     // Get firing position from mech model
     let firingPos = transform.position.clone();
-    if (render && render.mesh) {
-      const model = render.mesh as unknown as MechModel;
+    if (render?.model) {
+      const model = render.model as MechModel;
       if (model.getWeaponPosition) {
         firingPos = model.getWeaponPosition(slot);
       }
@@ -357,7 +357,11 @@ export class WeaponSystem extends System {
       `projectile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     );
 
-    const transformComponent = new TransformComponent(position);
+    // Extract the rotation from the mesh after lookAt() so RenderSystem preserves it
+    const transformComponent = new TransformComponent(
+      position,
+      mesh.rotation.clone()
+    );
     const renderComponent = new RenderComponent(mesh);
     renderComponent.addedToScene = true;
 
@@ -378,7 +382,7 @@ export class WeaponSystem extends System {
 
   private createAutocannonMesh(): THREE.Mesh {
     const geometry = new THREE.CylinderGeometry(0.12, 0.12, 5, 6);
-    geometry.rotateX(Math.PI / 2);
+    geometry.rotateX(-Math.PI / 2); // Point along -Z for lookAt compatibility
     return new THREE.Mesh(geometry, this.autocannonMaterial);
   }
 
@@ -426,27 +430,25 @@ export class WeaponSystem extends System {
   private createMissileMesh(): THREE.Group {
     const group = new THREE.Group();
 
-    // Body
+    // Body - solid filled cone pointing along -Z for lookAt compatibility
     const bodyGeometry = new THREE.ConeGeometry(0.25, 1.5, 8);
-    bodyGeometry.rotateX(Math.PI / 2);
-    bodyGeometry.translate(0, 0, 0.4);
+    bodyGeometry.rotateX(-Math.PI / 2); // Tip points along -Z
+    bodyGeometry.translate(0, 0, -0.4);
     const body = new THREE.Mesh(bodyGeometry, this.missileMaterial);
     group.add(body);
 
-    // Fins
-    const finGeometry = new THREE.BoxGeometry(0.05, 0.4, 0.25);
-    for (let i = 0; i < 4; i++) {
-      const fin = new THREE.Mesh(finGeometry, this.missileMaterial);
-      const angle = (i / 4) * Math.PI * 2;
-      fin.position.set(Math.cos(angle) * 0.2, Math.sin(angle) * 0.2, -0.25);
-      fin.rotation.z = angle;
-      group.add(fin);
-    }
+    // Red base cap at the back of the cone
+    const baseGeometry = new THREE.CircleGeometry(0.25, 8);
+    baseGeometry.rotateX(Math.PI / 2); // Face backwards (+Z)
+    baseGeometry.translate(0, 0, 0.35); // Position at cone base
+    const baseMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const base = new THREE.Mesh(baseGeometry, baseMaterial);
+    group.add(base);
 
-    // Flame
+    // Flame - at the back (positive Z now)
     const flameGeometry = new THREE.ConeGeometry(0.2, 0.8, 6);
-    flameGeometry.rotateX(-Math.PI / 2);
-    flameGeometry.translate(0, 0, -0.6);
+    flameGeometry.rotateX(Math.PI / 2); // Flame points backwards (+Z)
+    flameGeometry.translate(0, 0, 0.6);
     const flame = new THREE.Mesh(flameGeometry, this.flameMaterial.clone());
     flame.name = 'flame';
     group.add(flame);
