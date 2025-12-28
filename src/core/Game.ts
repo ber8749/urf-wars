@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { World } from './World';
 import { InputManager } from './InputManager';
 import { PhysicsWorld, initPhysics } from '../physics/PhysicsWorld';
-import { Skybox } from '../world/Skybox';
 import { HUD } from '../rendering/HUD';
 import { PostProcessing } from '../rendering/PostProcessing';
 import { SoundManager } from '../audio/SoundManager';
@@ -19,8 +18,7 @@ import {
   CameraSystem,
   MechAnimationSystem,
   AudioSystem,
-  TerrainSystem,
-  DayNightSystem,
+  DebugTerrainSystem,
 } from '../systems';
 
 // Import archetypes and config
@@ -49,17 +47,15 @@ export class Game {
   private playerEntity!: Entity;
   private hud!: HUD;
   private postProcessing!: PostProcessing;
-  private skybox!: Skybox;
 
-  // Lights (stored for day/night cycle updates)
-  private sunLight!: THREE.DirectionalLight;
+  // Simple global lighting
+  private directionalLight!: THREE.DirectionalLight;
   private ambientLight!: THREE.AmbientLight;
-  private hemiLight!: THREE.HemisphereLight;
 
   // Systems that need special access
   private cameraSystem!: CameraSystem;
   private renderSystem!: RenderSystem;
-  private terrainSystem!: TerrainSystem;
+  private terrainSystem!: DebugTerrainSystem;
 
   private lastTime: number = 0;
   private accumulator: number = 0;
@@ -89,9 +85,6 @@ export class Game {
     // Create ECS world
     this.world = new World();
 
-    // Create skybox (needed for DayNightSystem)
-    this.skybox = new Skybox(this.scene);
-
     // Register systems in correct order
     this.world.addSystem(new InputSystem(this.inputManager));
     this.world.addSystem(new MovementSystem(this.physicsWorld));
@@ -109,18 +102,8 @@ export class Game {
 
     this.world.addSystem(new AudioSystem(this.soundManager));
 
-    this.terrainSystem = new TerrainSystem(this.scene, this.physicsWorld);
+    this.terrainSystem = new DebugTerrainSystem(this.scene, this.physicsWorld);
     this.world.addSystem(this.terrainSystem);
-
-    this.world.addSystem(
-      new DayNightSystem(
-        this.scene,
-        this.skybox,
-        this.sunLight,
-        this.ambientLight,
-        this.hemiLight
-      )
-    );
 
     // Get initial terrain height for spawn
     const terrainHeight = this.terrainSystem.getHeightAt(0, 0);
@@ -229,7 +212,7 @@ export class Game {
 
   private setupScene(): void {
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x889999, 0.0005);
+    this.scene.background = new THREE.Color(0x87ceeb); // Light sky blue
 
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -241,28 +224,24 @@ export class Game {
   }
 
   private setupLighting(): void {
-    // Ambient light for base illumination
-    this.ambientLight = new THREE.AmbientLight(0xccddff, 2.0);
+    // Simple ambient light for base illumination
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     this.scene.add(this.ambientLight);
 
-    // Main directional light (sun/moon)
-    this.sunLight = new THREE.DirectionalLight(0xffffff, 5.0);
-    this.sunLight.position.set(100, 200, 100);
-    this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 2048;
-    this.sunLight.shadow.mapSize.height = 2048;
-    this.sunLight.shadow.camera.near = 10;
-    this.sunLight.shadow.camera.far = 500;
-    this.sunLight.shadow.camera.left = -150;
-    this.sunLight.shadow.camera.right = 150;
-    this.sunLight.shadow.camera.top = 150;
-    this.sunLight.shadow.camera.bottom = -150;
-    this.sunLight.shadow.bias = -0.0005;
-    this.scene.add(this.sunLight);
-
-    // Hemisphere light for sky/ground color variation
-    this.hemiLight = new THREE.HemisphereLight(0xeeffff, 0xccbbaa, 1.5);
-    this.scene.add(this.hemiLight);
+    // Main directional light (sun)
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    this.directionalLight.position.set(100, 200, 50);
+    this.directionalLight.castShadow = true;
+    this.directionalLight.shadow.mapSize.width = 2048;
+    this.directionalLight.shadow.mapSize.height = 2048;
+    this.directionalLight.shadow.camera.near = 10;
+    this.directionalLight.shadow.camera.far = 500;
+    this.directionalLight.shadow.camera.left = -150;
+    this.directionalLight.shadow.camera.right = 150;
+    this.directionalLight.shadow.camera.top = 150;
+    this.directionalLight.shadow.camera.bottom = -150;
+    this.directionalLight.shadow.bias = -0.0005;
+    this.scene.add(this.directionalLight);
   }
 
   start(): void {

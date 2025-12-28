@@ -100,20 +100,6 @@ export interface WeaponConfig {
   semiAuto?: boolean;
 }
 
-// Terrain types
-export interface ChunkCoord {
-  x: number;
-  z: number;
-}
-
-export interface BiomeConfig {
-  name: string;
-  groundColor: THREE.Color;
-  hillColor: THREE.Color;
-  peakColor: THREE.Color;
-  heightScale: number;
-}
-
 // Camera types
 export type CameraMode = 'first-person' | 'third-person';
 

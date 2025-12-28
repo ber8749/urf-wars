@@ -9,5 +9,4 @@ export { RenderSystem } from './RenderSystem';
 export { CameraSystem } from './CameraSystem';
 export { MechAnimationSystem } from './MechAnimationSystem';
 export { AudioSystem } from './AudioSystem';
-export { TerrainSystem } from './TerrainSystem';
-export { DayNightSystem } from './DayNightSystem';
+export { DebugTerrainSystem } from './DebugTerrainSystem';

@@ -9,4 +9,3 @@ export { HeatComponent } from './HeatComponent';
 export { HealthComponent } from './HealthComponent';
 export { InputComponent } from './InputComponent';
 export { ProjectileComponent } from './ProjectileComponent';
-export { TerrainChunkComponent } from './TerrainChunkComponent';
