@@ -11,6 +11,10 @@ export class MechController {
   // Movement smoothing
   private targetVelocity = new THREE.Vector3();
   private readonly friction = 8;
+  
+  // Leg auto-rotation settings
+  private readonly legAutoTurnRate = 2.0; // rad/s - how fast legs turn to face movement
+  private readonly minSpeedForAutoTurn = 2.0; // m/s - minimum speed to trigger auto-turn
 
   constructor(mech: Mech, input: InputManager, weapons: WeaponSystem) {
     this.mech = mech;
@@ -68,6 +72,9 @@ export class MechController {
     // Smoothly interpolate velocity (simulates mech weight/inertia)
     this.mech.velocity.lerp(this.targetVelocity, 1 - Math.exp(-this.friction * dt));
 
+    // Auto-rotate legs to face movement direction
+    this.autoRotateLegsToMovement(dt);
+
     // Apply velocity to position
     const movement = this.mech.velocity.clone().multiplyScalar(dt);
     this.mech.mesh.position.add(movement);
@@ -79,6 +86,51 @@ export class MechController {
     const bounds = 250;
     this.mech.mesh.position.x = THREE.MathUtils.clamp(this.mech.mesh.position.x, -bounds, bounds);
     this.mech.mesh.position.z = THREE.MathUtils.clamp(this.mech.mesh.position.z, -bounds, bounds);
+  }
+
+  private autoRotateLegsToMovement(dt: number): void {
+    const speed = this.mech.velocity.length();
+    
+    // Only auto-turn if moving fast enough
+    if (speed < this.minSpeedForAutoTurn) return;
+    
+    // Calculate the angle of movement direction (in world space)
+    // atan2 gives angle from +Z axis, but we want angle from -Z (forward)
+    const moveAngle = Math.atan2(-this.mech.velocity.x, -this.mech.velocity.z);
+    
+    // Calculate the difference between current leg rotation and movement direction
+    let angleDiff = moveAngle - this.mech.legRotation;
+    
+    // Normalize to -PI to PI
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    
+    // If difference is small enough, snap to target
+    const snapThreshold = 0.02;
+    if (Math.abs(angleDiff) < snapThreshold) {
+      return;
+    }
+    
+    // Calculate how much to rotate this frame
+    const maxRotation = this.legAutoTurnRate * dt;
+    const rotation = THREE.MathUtils.clamp(angleDiff, -maxRotation, maxRotation);
+    
+    // Store current world torso direction (legs + twist)
+    const worldTorsoDir = this.mech.legRotation + this.mech.torsoTwist;
+    
+    // Rotate legs toward movement direction
+    this.mech.legRotation += rotation;
+    
+    // Normalize leg rotation
+    while (this.mech.legRotation > Math.PI) this.mech.legRotation -= Math.PI * 2;
+    while (this.mech.legRotation < -Math.PI) this.mech.legRotation += Math.PI * 2;
+    
+    // Adjust torso twist to maintain the same world aim direction
+    this.mech.torsoTwist = worldTorsoDir - this.mech.legRotation;
+    
+    // Normalize torso twist
+    while (this.mech.torsoTwist > Math.PI) this.mech.torsoTwist -= Math.PI * 2;
+    while (this.mech.torsoTwist < -Math.PI) this.mech.torsoTwist += Math.PI * 2;
   }
 
   private handleTorsoAim(_dt: number): void {

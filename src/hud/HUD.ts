@@ -142,6 +142,10 @@ export class HUD {
     return display;
   }
 
+  setWeaponSystem(ws: WeaponSystem): void {
+    this.weaponSystem = ws;
+  }
+
   update(): void {
     this.updateDamageDisplay();
     this.updateStatusDisplay();
@@ -187,10 +191,6 @@ export class HUD {
         element.style.borderColor = '#00aa00';
       }
     }
-  }
-
-  setWeaponSystem(ws: WeaponSystem): void {
-    this.weaponSystem = ws;
   }
 
   private updateStatusDisplay(): void {
@@ -241,4 +241,3 @@ export class HUD {
     this.container.remove();
   }
 }
-
