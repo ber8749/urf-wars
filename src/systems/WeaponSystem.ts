@@ -8,9 +8,11 @@ import { MechComponent } from '../components/MechComponent';
 import { HeatComponent } from '../components/HeatComponent';
 import { RenderComponent } from '../components/RenderComponent';
 import { ProjectileComponent } from '../components/ProjectileComponent';
+import { HealthComponent } from '../components/HealthComponent';
 import { EventBus } from '../core/EventBus';
 import type { MechModel } from '../rendering/MechModel';
 import type { Weapon } from '../components/WeaponComponent';
+import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import {
   createAutocannonMaterial,
   createPPCCoreMaterial,
@@ -26,6 +28,9 @@ import {
   PROJECTILE_VISUALS,
 } from '../config/ProjectileVisuals';
 
+/** Default aim distance when no target is hit */
+const DEFAULT_AIM_DISTANCE = 500;
+
 /**
  * Weapon system handles weapon cooldowns and firing.
  */
@@ -36,6 +41,8 @@ export class WeaponSystem extends System {
   ];
 
   private scene: THREE.Scene;
+  private camera: THREE.PerspectiveCamera;
+  private physicsWorld: PhysicsWorld;
 
   // Materials for projectiles
   private autocannonMaterial!: THREE.MeshBasicMaterial;
@@ -64,10 +71,19 @@ export class WeaponSystem extends System {
   // Reusable objects to avoid per-frame allocations
   private readonly _aimDirection = new THREE.Vector3();
   private readonly _torsoRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+  private readonly _raycaster = new THREE.Raycaster();
+  private readonly _screenCenter = new THREE.Vector2(0, 0);
+  private readonly _aimTarget = new THREE.Vector3();
 
-  constructor(scene: THREE.Scene) {
+  constructor(
+    scene: THREE.Scene,
+    camera: THREE.PerspectiveCamera,
+    physicsWorld: PhysicsWorld
+  ) {
     super();
     this.scene = scene;
+    this.camera = camera;
+    this.physicsWorld = physicsWorld;
     this.createMaterials();
   }
 
@@ -152,7 +168,6 @@ export class WeaponSystem extends System {
     const weapons = entity.getComponent(WeaponComponent);
     const heat = entity.getComponent(HeatComponent);
     const transform = entity.getComponent(TransformComponent);
-    const mech = entity.getComponent(MechComponent);
     const render = entity.getComponent(RenderComponent);
 
     if (!weapons || !transform) return false;
@@ -177,12 +192,13 @@ export class WeaponSystem extends System {
       }
     }
 
-    // Get aim direction from torso
-    const direction = this.getAimDirection(transform, mech);
+    // Get aim target from reticle raycast, then calculate direction from weapon to target
+    const aimTarget = this.getAimTarget();
+    const direction = this.getAimDirectionToTarget(firingPos, aimTarget);
 
     // Create projectile based on weapon type
     if (weapon.config.type === 'laser') {
-      this.createLaserBeam(weapon, firingPos, direction);
+      this.createLaserBeam(entity.id, weapon, firingPos, direction);
     } else {
       this.createProjectile(entity, weapon, firingPos, direction);
     }
@@ -206,7 +222,51 @@ export class WeaponSystem extends System {
     return true;
   }
 
-  private getAimDirection(
+  /**
+   * Get the aim target point by raycasting from camera through screen center (reticle)
+   */
+  private getAimTarget(): THREE.Vector3 {
+    // Cast ray from camera through screen center
+    this._raycaster.setFromCamera(this._screenCenter, this.camera);
+
+    // Use physics world raycast to find target point
+    const rayOrigin = this._raycaster.ray.origin;
+    const rayDirection = this._raycaster.ray.direction;
+
+    const hit = this.physicsWorld.castRay(
+      rayOrigin,
+      rayDirection,
+      DEFAULT_AIM_DISTANCE
+    );
+
+    if (hit) {
+      this._aimTarget.copy(hit.point);
+    } else {
+      // No hit - aim at default distance along ray
+      this._aimTarget
+        .copy(rayDirection)
+        .multiplyScalar(DEFAULT_AIM_DISTANCE)
+        .add(rayOrigin);
+    }
+
+    return this._aimTarget;
+  }
+
+  /**
+   * Calculate direction from weapon position to aim target
+   */
+  private getAimDirectionToTarget(
+    weaponPosition: THREE.Vector3,
+    aimTarget: THREE.Vector3
+  ): THREE.Vector3 {
+    this._aimDirection.copy(aimTarget).sub(weaponPosition).normalize();
+    return this._aimDirection;
+  }
+
+  /**
+   * Legacy method for fallback - get aim direction from torso rotation
+   */
+  private getAimDirectionFromTorso(
     transform: TransformComponent,
     mech?: MechComponent
   ): THREE.Vector3 {
@@ -224,12 +284,53 @@ export class WeaponSystem extends System {
   }
 
   private createLaserBeam(
+    ownerId: string,
     weapon: Weapon,
     position: THREE.Vector3,
     direction: THREE.Vector3
   ): void {
-    const beamLength = weapon.config.range;
+    const maxRange = weapon.config.range;
     const { outerRadius, innerRadius, lifetime } = PROJECTILE_VISUALS.LASER;
+
+    // Hitscan: raycast to find what we hit
+    const hit = this.physicsWorld.castRay(position, direction, maxRange);
+
+    // Determine beam length - stop at hit point or max range
+    let beamLength = maxRange;
+
+    if (hit && hit.entityId && hit.entityId !== ownerId) {
+      beamLength = hit.distance;
+
+      // Apply damage to hit entity
+      const targetEntity = this.world.getEntity(hit.entityId);
+      if (targetEntity) {
+        const health = targetEntity.getComponent(HealthComponent);
+        if (health) {
+          health.takeDamage('torso', weapon.config.damage);
+
+          // Emit damage event
+          EventBus.emit(
+            'entity:damaged',
+            hit.entityId,
+            weapon.config.damage,
+            'torso',
+            hit.point
+          );
+
+          // Check if destroyed
+          if (health.isDestroyed()) {
+            EventBus.emit('entity:destroyed', hit.entityId, hit.point);
+            this.world.removeEntity(hit.entityId);
+          }
+        }
+      }
+
+      // Emit hit event for VFX/SFX
+      EventBus.emit('projectile:hit', 'laser', hit.point, hit.entityId);
+    } else if (hit) {
+      // Hit terrain or something without an entity - still shorten beam
+      beamLength = hit.distance;
+    }
 
     // Outer beam - red glow
     const outerGeometry = new THREE.CylinderGeometry(

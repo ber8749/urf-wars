@@ -106,8 +106,10 @@ export class Game {
     this.world.addSystem(new PhysicsSystem(this.physicsWorld));
     // 6. Heat management
     this.world.addSystem(new HeatSystem());
-    // 7. Weapon firing logic
-    this.world.addSystem(new WeaponSystem(this.scene));
+    // 7. Weapon firing logic (with camera for reticle aiming)
+    this.world.addSystem(
+      new WeaponSystem(this.scene, this.camera, this.physicsWorld)
+    );
     // 8. Projectile updates (with physics for collision detection)
     this.world.addSystem(new ProjectileSystem(this.scene, this.physicsWorld));
     // 9. Mech animations
