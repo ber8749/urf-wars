@@ -36,22 +36,24 @@ export function createMech(
   // Add collision shapes using centralized constants
   const { torso, legs } = MECH_CONSTANTS.COLLISION;
 
-  // Main body capsule
+  // Main body capsule - pass entity ID for hit resolution
   physicsWorld.addCapsuleCollider(
     body,
     `${id}-torso`,
     torso.halfHeight,
     torso.radius,
-    new THREE.Vector3(0, torso.offsetY, 0)
+    new THREE.Vector3(0, torso.offsetY, 0),
+    id
   );
 
-  // Leg colliders
+  // Leg colliders - pass entity ID for hit resolution
   physicsWorld.addCapsuleCollider(
     body,
     `${id}-legs`,
     legs.halfHeight,
     legs.radius,
-    new THREE.Vector3(0, legs.offsetY, 0)
+    new THREE.Vector3(0, legs.offsetY, 0),
+    id
   );
 
   // Lock rotation on X and Z axes (mech stays upright)

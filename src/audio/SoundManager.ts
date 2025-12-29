@@ -163,6 +163,14 @@ export class SoundManager {
   }
 
   /**
+   * Play explosion sound for destroyed entities
+   */
+  playExplosion(): void {
+    if (!this.isReady() || !this.systemSynth) return;
+    this.systemSynth.playExplosion(this.sfxVolume);
+  }
+
+  /**
    * Start cockpit ambient sound
    */
   startCockpitAmbience(): void {

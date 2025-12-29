@@ -26,6 +26,7 @@ import {
 
 // Import archetypes and config
 import { createMech } from '../archetypes/createMech';
+import { createTarget } from '../archetypes/createTarget';
 import { MechConfigs } from '../config/MechConfigs';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { CAMERA_CONFIG } from '../config/CameraConfig';
@@ -107,8 +108,8 @@ export class Game {
     this.world.addSystem(new HeatSystem());
     // 7. Weapon firing logic
     this.world.addSystem(new WeaponSystem(this.scene));
-    // 8. Projectile updates
-    this.world.addSystem(new ProjectileSystem(this.scene));
+    // 8. Projectile updates (with physics for collision detection)
+    this.world.addSystem(new ProjectileSystem(this.scene, this.physicsWorld));
     // 9. Mech animations
     this.world.addSystem(new MechAnimationSystem());
 
@@ -136,6 +137,9 @@ export class Game {
       true
     );
     this.world.addEntity(this.playerEntity);
+
+    // Spawn test targets for damage testing
+    this.spawnTestTargets();
 
     // Setup HUD with entity reference wrapper
     this.hud = new HUD(this.container, this.createMechInterface());
@@ -370,6 +374,37 @@ export class Game {
     this.renderer.setSize(width, height);
     this.postProcessing.resize(width, height);
     this.hud.resize();
+  }
+
+  /**
+   * Spawn test targets at various distances for damage testing
+   */
+  private spawnTestTargets(): void {
+    // Player spawn position (targets will face this)
+    const playerSpawn = new THREE.Vector3(0, 0, 0);
+
+    // Target positions: spread out in front of spawn at varying distances
+    const targetPositions = [
+      { x: 0, z: -20 }, // Close target - 20m
+      { x: -15, z: -40 }, // Medium left - 40m
+      { x: 15, z: -40 }, // Medium right - 40m
+      { x: 0, z: -60 }, // Far center - 60m
+      { x: -25, z: -80 }, // Far left - 80m
+    ];
+
+    targetPositions.forEach((pos, index) => {
+      const terrainHeight = this.terrainSystem.getHeightAt(pos.x, pos.z);
+      const targetHeight = terrainHeight + 6; // Center of 12m wall
+
+      const target = createTarget(
+        `target-${index + 1}`,
+        this.physicsWorld,
+        new THREE.Vector3(pos.x, targetHeight, pos.z),
+        {}, // default config
+        playerSpawn // face toward player spawn
+      );
+      this.world.addEntity(target);
+    });
   }
 
   /**

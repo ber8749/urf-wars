@@ -27,6 +27,8 @@ export class PhysicsWorld {
   private world: World;
   private bodies: Map<string, RigidBody> = new Map();
   private colliders: Map<string, Collider> = new Map();
+  /** Map from collider handle to entity ID for hit resolution */
+  private colliderToEntity: Map<number, string> = new Map();
 
   constructor() {
     if (!rapierInitialized) {
@@ -89,7 +91,8 @@ export class PhysicsWorld {
     body: RigidBody,
     id: string,
     halfExtents: THREE.Vector3,
-    offset?: THREE.Vector3
+    offset?: THREE.Vector3,
+    entityId?: string
   ): Collider {
     const colliderDesc = RAPIER.ColliderDesc.cuboid(
       halfExtents.x,
@@ -107,6 +110,11 @@ export class PhysicsWorld {
     const collider = this.world.createCollider(colliderDesc, body);
     this.colliders.set(id, collider);
 
+    // Track entity ownership for hit resolution
+    if (entityId) {
+      this.colliderToEntity.set(collider.handle, entityId);
+    }
+
     return collider;
   }
 
@@ -115,7 +123,8 @@ export class PhysicsWorld {
     id: string,
     halfHeight: number,
     radius: number,
-    offset?: THREE.Vector3
+    offset?: THREE.Vector3,
+    entityId?: string
   ): Collider {
     const colliderDesc = RAPIER.ColliderDesc.capsule(halfHeight, radius);
 
@@ -128,6 +137,11 @@ export class PhysicsWorld {
 
     const collider = this.world.createCollider(colliderDesc, body);
     this.colliders.set(id, collider);
+
+    // Track entity ownership for hit resolution
+    if (entityId) {
+      this.colliderToEntity.set(collider.handle, entityId);
+    }
 
     return collider;
   }
@@ -184,16 +198,65 @@ export class PhysicsWorld {
   removeBody(id: string): void {
     const body = this.bodies.get(id);
     if (body) {
+      // Remove collider-entity mappings for all colliders on this body
+      for (let i = 0; i < body.numColliders(); i++) {
+        const collider = body.collider(i);
+        this.colliderToEntity.delete(collider.handle);
+      }
       this.world.removeRigidBody(body);
       this.bodies.delete(id);
     }
+  }
+
+  /**
+   * Add a cylinder collider to a body
+   */
+  addCylinderCollider(
+    body: RigidBody,
+    id: string,
+    halfHeight: number,
+    radius: number,
+    offset?: THREE.Vector3,
+    entityId?: string
+  ): Collider {
+    const colliderDesc = RAPIER.ColliderDesc.cylinder(halfHeight, radius);
+
+    if (offset) {
+      colliderDesc.setTranslation(offset.x, offset.y, offset.z);
+    }
+
+    colliderDesc.setFriction(PHYSICS_CONFIG.DEFAULT_FRICTION);
+    colliderDesc.setRestitution(PHYSICS_CONFIG.DEFAULT_RESTITUTION);
+
+    const collider = this.world.createCollider(colliderDesc, body);
+    this.colliders.set(id, collider);
+
+    // Track entity ownership for hit resolution
+    if (entityId) {
+      this.colliderToEntity.set(collider.handle, entityId);
+    }
+
+    return collider;
+  }
+
+  /**
+   * Get the entity ID that owns a collider
+   */
+  getEntityIdFromCollider(colliderHandle: number): string | undefined {
+    return this.colliderToEntity.get(colliderHandle);
   }
 
   castRay(
     origin: THREE.Vector3,
     direction: THREE.Vector3,
     maxDistance: number
-  ): { point: THREE.Vector3; normal: THREE.Vector3; distance: number } | null {
+  ): {
+    point: THREE.Vector3;
+    normal: THREE.Vector3;
+    distance: number;
+    entityId?: string;
+    colliderHandle: number;
+  } | null {
     const ray = new RAPIER.Ray(
       { x: origin.x, y: origin.y, z: origin.z },
       { x: direction.x, y: direction.y, z: direction.z }
@@ -204,6 +267,7 @@ export class PhysicsWorld {
     if (hit) {
       const hitPoint = ray.pointAt(hit.timeOfImpact);
       const normal = hit.collider.castRayAndGetNormal(ray, maxDistance, true);
+      const entityId = this.colliderToEntity.get(hit.collider.handle);
 
       return {
         point: new THREE.Vector3(hitPoint.x, hitPoint.y, hitPoint.z),
@@ -211,6 +275,8 @@ export class PhysicsWorld {
           ? new THREE.Vector3(normal.normal.x, normal.normal.y, normal.normal.z)
           : new THREE.Vector3(0, 1, 0),
         distance: hit.timeOfImpact,
+        entityId,
+        colliderHandle: hit.collider.handle,
       };
     }
 
@@ -237,5 +303,6 @@ export class PhysicsWorld {
     this.world.free();
     this.bodies.clear();
     this.colliders.clear();
+    this.colliderToEntity.clear();
   }
 }

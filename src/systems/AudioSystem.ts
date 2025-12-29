@@ -57,6 +57,52 @@ export class AudioSystem extends System {
     EventBus.on('damage:impact', (_entityId: string, severity: number) => {
       this.soundManager.playDamageImpact(severity);
     });
+
+    // Projectile hit sounds
+    EventBus.on(
+      'projectile:hit',
+      (weaponType: WeaponType, _hitPoint: unknown, _targetId: string) => {
+        this.playImpactSound(weaponType);
+      }
+    );
+
+    // Entity damaged sound
+    EventBus.on(
+      'entity:damaged',
+      (
+        _targetId: string,
+        damage: number,
+        _zone: string,
+        _hitPoint: unknown
+      ) => {
+        // Scale severity based on damage amount (assuming ~100 HP targets)
+        const severity = Math.min(1, damage / 50);
+        this.soundManager.playDamageImpact(severity);
+      }
+    );
+
+    // Entity destroyed sound
+    EventBus.on('entity:destroyed', (_targetId: string, _hitPoint: unknown) => {
+      this.soundManager.playExplosion();
+    });
+  }
+
+  private playImpactSound(weaponType: WeaponType): void {
+    // Different impact sounds based on weapon type
+    switch (weaponType) {
+      case 'ppc':
+        this.soundManager.playDamageImpact(0.9);
+        break;
+      case 'autocannon':
+        this.soundManager.playDamageImpact(0.5);
+        break;
+      case 'missile':
+        this.soundManager.playDamageImpact(0.7);
+        break;
+      case 'laser':
+        this.soundManager.playDamageImpact(0.4);
+        break;
+    }
   }
 
   private playWeaponSound(type: WeaponType): void {

@@ -194,6 +194,92 @@ export class SystemSynth extends ProceduralSynth {
   }
 
   /**
+   * Play explosion sound for destroyed entities
+   */
+  playExplosion(volume: number): void {
+    const gain = 0.6 * volume;
+    const now = this.now;
+
+    // Layer 1: Low rumble
+    this.playExplosionRumble(gain, now);
+
+    // Layer 2: Mid crunch
+    this.playExplosionCrunch(gain * 0.8, now);
+
+    // Layer 3: High debris
+    this.playExplosionDebris(gain * 0.4, now);
+  }
+
+  private playExplosionRumble(gain: number, startTime: number): void {
+    const duration = 0.8;
+
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(80, startTime);
+    osc.frequency.exponentialRampToValueAtTime(30, startTime + duration);
+
+    const gainNode = this.ctx.createGain();
+    const filter = this.createLowpassFilter(200, 1);
+
+    osc.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.masterGain);
+
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  }
+
+  private playExplosionCrunch(gain: number, startTime: number): void {
+    const duration = 0.4;
+
+    const noise = this.createNoiseSource(duration);
+    const gainNode = this.ctx.createGain();
+    const filter = this.createBandpassFilter(800, 2);
+    const distortion = this.createDistortion(50);
+
+    noise.connect(filter);
+    filter.connect(distortion);
+    distortion.connect(gainNode);
+    gainNode.connect(this.masterGain);
+
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+    noise.start(startTime);
+    noise.stop(startTime + duration);
+  }
+
+  private playExplosionDebris(gain: number, startTime: number): void {
+    const duration = 0.6;
+
+    const noise = this.createNoiseSource(duration);
+    const gainNode = this.ctx.createGain();
+    const filter = this.createHighpassFilter(2000, 1);
+
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.masterGain);
+
+    // Stuttering debris pattern
+    gainNode.gain.setValueAtTime(0, startTime + 0.05);
+    for (let i = 0; i < 6; i++) {
+      const t = startTime + 0.05 + i * 0.08;
+      const intensity = gain * (1 - i * 0.15);
+      gainNode.gain.linearRampToValueAtTime(intensity, t);
+      gainNode.gain.linearRampToValueAtTime(intensity * 0.2, t + 0.04);
+    }
+    gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    noise.start(startTime);
+    noise.stop(startTime + duration);
+  }
+
+  /**
    * Start continuous cockpit ambience
    */
   startCockpitAmbience(volume: number): void {
