@@ -417,14 +417,14 @@ export class Game {
   }
 
   /**
-   * Spawn enemy turrets at fixed positions near targets
+   * Spawn enemy turrets at fixed positions east of spawn
    */
   private spawnTurrets(): void {
-    // Turret positions: placed near some targets to defend them
+    // Turret positions: 200 meters east of spawn point
     const turretPositions = [
-      { x: 10, z: -25 }, // Near first target
-      { x: -20, z: -55 }, // Near medium-distance targets
-      { x: 20, z: -75 }, // Near far targets
+      { x: 200, z: -20 }, // East, slightly forward
+      { x: 200, z: 0 }, // Due east
+      { x: 200, z: 20 }, // East, slightly back
     ];
 
     turretPositions.forEach((pos, index) => {
