@@ -1,0 +1,103 @@
+# Commit Message Guidelines
+
+This project follows the [Angular Commit Message Guidelines](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines).
+
+## Commit Message Format
+
+Each commit message consists of a **header**, a **body**, and a **footer**. The header has a special format that includes a **type**, a **scope**, and a **subject**:
+
+```
+<type>(<scope>): <subject>
+<BLANK LINE>
+<body>
+<BLANK LINE>
+<footer>
+```
+
+The **header** is mandatory and the **scope** of the header is optional.
+
+Any line of the commit message cannot be longer than 100 characters.
+
+## Type
+
+Must be one of the following:
+
+- **build**: Changes that affect the build system or external dependencies (example scopes: vite, npm)
+- **ci**: Changes to CI configuration files and scripts
+- **docs**: Documentation only changes
+- **feat**: A new feature
+- **fix**: A bug fix
+- **perf**: A code change that improves performance
+- **refactor**: A code change that neither fixes a bug nor adds a feature
+- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- **test**: Adding missing tests or correcting existing tests
+
+## Scope
+
+The scope should be the name of the module/system affected (as perceived by the person reading the changelog). Examples for this project:
+
+- **core**: Core game engine (Entity, Component, System, World, Game)
+- **physics**: Physics system and Rapier integration
+- **rendering**: Three.js rendering, shaders, post-processing
+- **audio**: Sound system and synthesizers
+- **input**: Input handling and controls
+- **weapons**: Weapon systems and projectiles
+- **mech**: Mech-specific logic and animations
+- **hud**: HUD and UI components
+- **config**: Configuration files
+- **network**: Networking and multiplayer
+
+## Subject
+
+The subject contains a succinct description of the change:
+
+- Use the imperative, present tense: "change" not "changed" nor "changes"
+- Don't capitalize the first letter
+- No dot (.) at the end
+
+## Body
+
+Use the imperative, present tense: "change" not "changed" nor "changes".
+The body should include the motivation for the change and contrast this with previous behavior.
+
+## Footer
+
+The footer should contain any information about **Breaking Changes** and is also the place to reference GitHub issues that this commit **Closes**.
+
+**Breaking Changes** should start with the word `BREAKING CHANGE:` with a space or two newlines.
+
+## Examples
+
+```
+docs(readme): update installation instructions
+```
+
+```
+feat(weapons): add heat-seeking missile launcher
+
+Implements a new weapon type that tracks enemy mechs using their heat signature.
+The tracking algorithm uses predictive targeting based on target velocity.
+
+Closes #42
+```
+
+```
+fix(physics): correct collision detection for projectiles
+
+The previous implementation was using bounding box checks which caused
+projectiles to pass through thin obstacles.
+
+BREAKING CHANGE: Projectile collider shapes have changed from boxes to capsules.
+```
+
+```
+refactor(core): extract event bus into separate module
+```
+
+```
+perf(rendering): optimize shadow map updates
+
+Only update shadow maps when light sources or shadow-casting objects move.
+This reduces GPU overhead by ~15% in static scenes.
+```
+
