@@ -38,10 +38,13 @@ export class HealthComponent implements Component {
   }
 
   /**
-   * Check if entity is destroyed (head or torso at 0)
+   * Check if entity is destroyed (head or torso at 0, only if they had armor)
    */
   isDestroyed(): boolean {
-    return this.armor.head <= 0 || this.armor.torso <= 0;
+    // Only consider a zone destroyed if it had base armor and is now depleted
+    const headDestroyed = this.baseArmor.head > 0 && this.armor.head <= 0;
+    const torsoDestroyed = this.baseArmor.torso > 0 && this.armor.torso <= 0;
+    return headDestroyed || torsoDestroyed;
   }
 
   /**

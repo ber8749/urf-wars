@@ -22,11 +22,13 @@ import {
   MechAnimationSystem,
   AudioSystem,
   DebugTerrainSystem,
+  TurretAISystem,
 } from '../systems';
 
 // Import archetypes and config
 import { createMech } from '../archetypes/createMech';
 import { createTarget } from '../archetypes/createTarget';
+import { createTurret } from '../archetypes/createTurret';
 import { MechConfigs } from '../config/MechConfigs';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { CAMERA_CONFIG } from '../config/CameraConfig';
@@ -112,7 +114,9 @@ export class Game {
     );
     // 8. Projectile updates (with physics for collision detection)
     this.world.addSystem(new ProjectileSystem(this.scene, this.physicsWorld));
-    // 9. Mech animations
+    // 9. Turret AI (detection, tracking, firing)
+    this.world.addSystem(new TurretAISystem());
+    // 10. Mech animations
     this.world.addSystem(new MechAnimationSystem());
 
     this.renderSystem = new RenderSystem(this.scene);
@@ -142,6 +146,9 @@ export class Game {
 
     // Spawn test targets for damage testing
     this.spawnTestTargets();
+
+    // Spawn enemy turrets
+    this.spawnTurrets();
 
     // Setup HUD with entity reference wrapper
     this.hud = new HUD(this.container, this.createMechInterface());
@@ -406,6 +413,33 @@ export class Game {
         playerSpawn // face toward player spawn
       );
       this.world.addEntity(target);
+    });
+  }
+
+  /**
+   * Spawn enemy turrets at fixed positions near targets
+   */
+  private spawnTurrets(): void {
+    // Turret positions: placed near some targets to defend them
+    const turretPositions = [
+      { x: 10, z: -25 }, // Near first target
+      { x: -20, z: -55 }, // Near medium-distance targets
+      { x: 20, z: -75 }, // Near far targets
+    ];
+
+    turretPositions.forEach((pos, index) => {
+      const terrainHeight = this.terrainSystem.getHeightAt(pos.x, pos.z);
+
+      const turret = createTurret(
+        `turret-${index + 1}`,
+        this.physicsWorld,
+        new THREE.Vector3(pos.x, terrainHeight, pos.z),
+        {
+          detectionRange: 80, // Can detect player from 80m
+          weaponType: index === 1 ? 'laser' : 'autocannon', // Mix of weapon types
+        }
+      );
+      this.world.addEntity(turret);
     });
   }
 

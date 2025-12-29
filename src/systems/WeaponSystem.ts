@@ -88,13 +88,28 @@ export class WeaponSystem extends System {
   }
 
   init(): void {
-    // Listen for fire requests from MovementSystem
+    // Listen for fire requests from MovementSystem (player)
     EventBus.on('weapon:fire_request', (entityId: string, slot: number) => {
       const entity = this.world.getEntity(entityId);
       if (entity) {
         this.fire(entity, slot);
       }
     });
+
+    // Listen for turret fire requests (includes position/direction)
+    EventBus.on(
+      'turret:fire_request',
+      (
+        entityId: string,
+        slot: number,
+        fireData: { position: THREE.Vector3; direction: THREE.Vector3 }
+      ) => {
+        const entity = this.world.getEntity(entityId);
+        if (entity) {
+          this.fireTurret(entity, slot, fireData.position, fireData.direction);
+        }
+      }
+    );
   }
 
   private createMaterials(): void {
@@ -206,6 +221,45 @@ export class WeaponSystem extends System {
     // Add heat
     if (heat) {
       heat.addHeat(weapon.config.heatGenerated);
+    }
+
+    // Start cooldown
+    weapon.cooldownRemaining = weapon.config.cooldown;
+
+    // Use ammo
+    if (weapon.ammo !== undefined) {
+      weapon.ammo--;
+    }
+
+    // Emit event for audio
+    EventBus.emit('weapon:fired', weapon.config.type, entity.id);
+
+    return true;
+  }
+
+  /**
+   * Fire a turret's weapon with explicit position and direction
+   */
+  fireTurret(
+    entity: Entity,
+    slot: number,
+    position: THREE.Vector3,
+    direction: THREE.Vector3
+  ): boolean {
+    const weapons = entity.getComponent(WeaponComponent);
+    if (!weapons) return false;
+
+    const weapon = weapons.getWeapon(slot);
+    if (!weapon) return false;
+
+    // Check cooldown and ammo
+    if (!weapons.canFire(slot)) return false;
+
+    // Create projectile based on weapon type
+    if (weapon.config.type === 'laser') {
+      this.createLaserBeam(entity.id, weapon, position, direction);
+    } else {
+      this.createProjectile(entity, weapon, position, direction);
     }
 
     // Start cooldown
