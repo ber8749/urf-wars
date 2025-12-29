@@ -4,6 +4,7 @@ import { TransformComponent } from '../components/TransformComponent';
 import { PhysicsComponent } from '../components/PhysicsComponent';
 import { RenderComponent } from '../components/RenderComponent';
 import { HealthComponent } from '../components/HealthComponent';
+import { PostProcessing } from '../rendering/PostProcessing';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { ArmorZones } from '../types';
 
@@ -153,6 +154,9 @@ export function createTarget(
     finalConfig.wallThickness
   );
   mesh.position.copy(position);
+
+  // Mark target and wall for cel-shading outline
+  PostProcessing.markForOutline(mesh);
 
   // Orient the target to face towards a point
   if (faceToward) {

@@ -7,6 +7,7 @@ import { HealthComponent } from '../components/HealthComponent';
 import { WeaponComponent, WEAPON_CONFIGS } from '../components/WeaponComponent';
 import { TurretComponent } from '../components/TurretComponent';
 import { TurretModel } from '../rendering/TurretModel';
+import { PostProcessing } from '../rendering/PostProcessing';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { ArmorZones, WeaponType } from '../types';
 
@@ -66,6 +67,9 @@ export function createTurret(
   // Create visual model
   const turretModel = new TurretModel();
   turretModel.mesh.position.copy(position);
+
+  // Mark turret for cel-shading outline
+  PostProcessing.markForOutline(turretModel.mesh);
 
   // Create components
   const transformComp = new TransformComponent(position);

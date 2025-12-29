@@ -9,6 +9,7 @@ import { HeatComponent } from '../components/HeatComponent';
 import { HealthComponent } from '../components/HealthComponent';
 import { InputComponent } from '../components/InputComponent';
 import { MechModel } from '../rendering/MechModel';
+import { PostProcessing } from '../rendering/PostProcessing';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { MechConfig } from '../types';
 import { MECH_CONSTANTS } from '../config/MechConfigs';
@@ -61,6 +62,9 @@ export function createMech(
 
   // Create visual model
   const model = new MechModel();
+
+  // Mark mech for cel-shading outline
+  PostProcessing.markForOutline(model.mesh);
 
   // Create components
   const transformComp = new TransformComponent(spawnPosition);
