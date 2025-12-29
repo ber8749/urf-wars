@@ -8,6 +8,7 @@ import { WeaponComponent } from '../components/WeaponComponent';
 import { HeatComponent } from '../components/HeatComponent';
 import { HealthComponent } from '../components/HealthComponent';
 import { InputComponent } from '../components/InputComponent';
+import { TargetingComponent } from '../components/TargetingComponent';
 import { MechModel } from '../rendering/MechModel';
 import { PostProcessing } from '../rendering/PostProcessing';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
@@ -95,9 +96,10 @@ export function createMech(
   entity.addComponent(heatComp);
   entity.addComponent(healthComp);
 
-  // Add input component for player
+  // Add input and targeting components for player
   if (isPlayer) {
     entity.addComponent(new InputComponent(true));
+    entity.addComponent(new TargetingComponent(150)); // 150m detection range
   }
 
   return entity;

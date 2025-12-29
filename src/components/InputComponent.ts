@@ -38,6 +38,8 @@ export class InputComponent implements Component {
       lookDown: false,
       fire: false,
       altFire: false,
+      targetPrevious: false,
+      targetNext: false,
       mouseX: 0,
       mouseY: 0,
       mouseDeltaX: 0,

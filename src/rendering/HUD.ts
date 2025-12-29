@@ -30,6 +30,19 @@ interface ArmorStatus {
   rightLeg: number;
 }
 
+interface TargetInfo {
+  x: number; // Screen X (0-1)
+  y: number; // Screen Y (0-1)
+  distance: number;
+  isLocked: boolean;
+  healthPercent: number;
+}
+
+interface TargetingInterface {
+  getTargets(): TargetInfo[];
+  hasLockedTarget(): boolean;
+}
+
 interface MechDataProvider {
   getHeatSystem(): HeatSystemInterface;
   getSpeed(): number;
@@ -37,6 +50,7 @@ interface MechDataProvider {
   getWeaponSystem(): WeaponSystemInterface;
   getArmorStatus(): ArmorStatus;
   getCameraController?(): CameraControllerInterface;
+  getTargeting?(): TargetingInterface;
 }
 
 export class HUD {
@@ -51,6 +65,10 @@ export class HUD {
   private armorDisplay!: HTMLElement;
   private weaponDisplay!: HTMLElement;
   private warningText!: HTMLElement;
+
+  // Targeting canvas for drawing indicators
+  private targetingCanvas!: HTMLCanvasElement;
+  private targetingCtx!: CanvasRenderingContext2D;
 
   private isVisible: boolean = true;
   private lastHeatWarningState: boolean = false;
@@ -380,6 +398,8 @@ export class HUD {
       <div class="warning-panel" id="warning-text">WARNING</div>
       
       <div class="scanlines"></div>
+      
+      <canvas id="targeting-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
     `;
 
     return hud;
@@ -396,6 +416,11 @@ export class HUD {
       this.armorDisplay = this.hudElement.querySelector('#armor-display')!;
       this.weaponDisplay = this.hudElement.querySelector('#weapon-display')!;
       this.warningText = this.hudElement.querySelector('#warning-text')!;
+      this.targetingCanvas = this.hudElement.querySelector(
+        '#targeting-canvas'
+      )! as HTMLCanvasElement;
+      this.targetingCtx = this.targetingCanvas.getContext('2d')!;
+      this.resizeTargetingCanvas();
     }
 
     // Update heat
@@ -438,6 +463,9 @@ export class HUD {
 
     // Update weapons
     this.updateWeaponDisplay();
+
+    // Update targeting indicators
+    this.updateTargetingDisplay();
   }
 
   private updateArmorDisplay(): void {
@@ -533,6 +561,203 @@ export class HUD {
 
   resize(): void {
     // Handle HUD resize if needed
+    this.resizeTargetingCanvas();
+  }
+
+  private resizeTargetingCanvas(): void {
+    if (!this.targetingCanvas) return;
+    this.targetingCanvas.width = window.innerWidth;
+    this.targetingCanvas.height = window.innerHeight;
+  }
+
+  private updateTargetingDisplay(): void {
+    if (!this.targetingCtx || !this.mechData.getTargeting) return;
+
+    const targeting = this.mechData.getTargeting();
+    const targets = targeting.getTargets();
+    const ctx = this.targetingCtx;
+    const width = this.targetingCanvas.width;
+    const height = this.targetingCanvas.height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw all targets
+    for (const target of targets) {
+      const screenX = target.x * width;
+      const screenY = target.y * height;
+
+      if (target.isLocked) {
+        // Locked target: red square + diamond + health bar
+        this.drawLockedTarget(
+          ctx,
+          screenX,
+          screenY,
+          target.distance,
+          target.healthPercent
+        );
+      } else {
+        // Detected target: green square
+        this.drawDetectedTarget(ctx, screenX, screenY, target.distance);
+      }
+    }
+  }
+
+  private drawDetectedTarget(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    distance: number
+  ): void {
+    const size = Math.max(30, 60 - distance * 0.2); // Size decreases with distance
+
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 8;
+
+    // Draw square brackets at corners
+    const cornerLength = size * 0.3;
+    const halfSize = size / 2;
+
+    // Top-left corner
+    ctx.beginPath();
+    ctx.moveTo(x - halfSize, y - halfSize + cornerLength);
+    ctx.lineTo(x - halfSize, y - halfSize);
+    ctx.lineTo(x - halfSize + cornerLength, y - halfSize);
+    ctx.stroke();
+
+    // Top-right corner
+    ctx.beginPath();
+    ctx.moveTo(x + halfSize - cornerLength, y - halfSize);
+    ctx.lineTo(x + halfSize, y - halfSize);
+    ctx.lineTo(x + halfSize, y - halfSize + cornerLength);
+    ctx.stroke();
+
+    // Bottom-left corner
+    ctx.beginPath();
+    ctx.moveTo(x - halfSize, y + halfSize - cornerLength);
+    ctx.lineTo(x - halfSize, y + halfSize);
+    ctx.lineTo(x - halfSize + cornerLength, y + halfSize);
+    ctx.stroke();
+
+    // Bottom-right corner
+    ctx.beginPath();
+    ctx.moveTo(x + halfSize - cornerLength, y + halfSize);
+    ctx.lineTo(x + halfSize, y + halfSize);
+    ctx.lineTo(x + halfSize, y + halfSize - cornerLength);
+    ctx.stroke();
+
+    // Draw distance
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillStyle = '#00ff88';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.round(distance)}m`, x, y + halfSize + 15);
+
+    ctx.shadowBlur = 0;
+  }
+
+  private drawLockedTarget(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    distance: number,
+    healthPercent: number
+  ): void {
+    const size = Math.max(40, 70 - distance * 0.2); // Slightly larger for locked
+
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = 10;
+
+    const halfSize = size / 2;
+
+    // Draw full red square
+    ctx.strokeRect(x - halfSize, y - halfSize, size, size);
+
+    // Draw diamond (rotated square) inside
+    const diamondSize = size * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y - diamondSize); // Top
+    ctx.lineTo(x + diamondSize, y); // Right
+    ctx.lineTo(x, y + diamondSize); // Bottom
+    ctx.lineTo(x - diamondSize, y); // Left
+    ctx.closePath();
+    ctx.stroke();
+
+    // Draw center dot
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw health bar above the target
+    const healthBarWidth = size * 1.2;
+    const healthBarHeight = 6;
+    const healthBarY = y - halfSize - 28;
+    const healthBarX = x - healthBarWidth / 2;
+
+    // Health bar background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(
+      healthBarX - 1,
+      healthBarY - 1,
+      healthBarWidth + 2,
+      healthBarHeight + 2
+    );
+
+    // Health bar border
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      healthBarX - 1,
+      healthBarY - 1,
+      healthBarWidth + 2,
+      healthBarHeight + 2
+    );
+
+    // Health bar fill - color based on health
+    const healthFraction = healthPercent / 100;
+    let healthColor: string;
+    if (healthPercent > 60) {
+      healthColor = '#00ff88'; // Green
+    } else if (healthPercent > 30) {
+      healthColor = '#ffff00'; // Yellow
+    } else {
+      healthColor = '#ff4444'; // Red
+    }
+
+    ctx.fillStyle = healthColor;
+    ctx.shadowColor = healthColor;
+    ctx.shadowBlur = 4;
+    ctx.fillRect(
+      healthBarX,
+      healthBarY,
+      healthBarWidth * healthFraction,
+      healthBarHeight
+    );
+
+    // Health percentage text
+    ctx.shadowBlur = 0;
+    ctx.font = 'bold 9px "Courier New", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.round(healthPercent)}%`, x, healthBarY - 3);
+
+    // Draw "LOCKED" text below health bar
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = 10;
+    ctx.font = 'bold 11px "Courier New", monospace';
+    ctx.fillStyle = '#ff4444';
+    ctx.textAlign = 'center';
+    ctx.fillText('LOCKED', x, healthBarY - 14);
+
+    // Draw distance below target
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillText(`${Math.round(distance)}m`, x, y + halfSize + 15);
+
+    ctx.shadowBlur = 0;
   }
 
   dispose(): void {

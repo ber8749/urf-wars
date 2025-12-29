@@ -139,6 +139,9 @@ export class InputManager {
       // Actions (Space or Left Click to fire)
       fire: this.mouseButtons.get(0) || this.keys.get('Space') || false,
       altFire: this.mouseButtons.get(2) || false,
+      // Targeting: Q/E
+      targetPrevious: this.keys.get('KeyQ') || false,
+      targetNext: this.keys.get('KeyE') || false,
       // Mouse
       mouseX: this.mouseX,
       mouseY: this.mouseY,

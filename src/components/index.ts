@@ -10,3 +10,4 @@ export { HealthComponent } from './HealthComponent';
 export { InputComponent } from './InputComponent';
 export { ProjectileComponent } from './ProjectileComponent';
 export { TurretComponent } from './TurretComponent';
+export { TargetingComponent } from './TargetingComponent';

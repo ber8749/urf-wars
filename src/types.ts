@@ -39,6 +39,9 @@ export interface InputSnapshot {
   // Actions
   fire: boolean;
   altFire: boolean;
+  // Targeting (Q/E)
+  targetPrevious: boolean;
+  targetNext: boolean;
   // Mouse
   mouseX: number;
   mouseY: number;

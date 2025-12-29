@@ -23,6 +23,7 @@ import {
   AudioSystem,
   DebugTerrainSystem,
   TurretAISystem,
+  TargetingSystem,
 } from '../systems';
 
 // Import archetypes and config
@@ -40,6 +41,7 @@ import { PhysicsComponent } from '../components/PhysicsComponent';
 import { MechComponent } from '../components/MechComponent';
 import { WeaponComponent } from '../components/WeaponComponent';
 import { HealthComponent } from '../components/HealthComponent';
+import { TargetingComponent } from '../components/TargetingComponent';
 import type { Entity } from './Entity';
 
 export class Game {
@@ -104,7 +106,9 @@ export class Game {
     this.world.addSystem(new TorsoControlSystem());
     // 4. Weapon input handling
     this.world.addSystem(new WeaponControlSystem());
-    // 5. Physics simulation
+    // 5. Targeting system (enemy detection, target cycling)
+    this.world.addSystem(new TargetingSystem(this.camera));
+    // 6. Physics simulation
     this.world.addSystem(new PhysicsSystem(this.physicsWorld));
     // 6. Heat management
     this.world.addSystem(new HeatSystem());
@@ -233,6 +237,35 @@ export class Game {
       getCameraController: () => ({
         isFirstPerson: () => cameraSystem.isFirstPerson(),
       }),
+      getTargeting: () => {
+        const targeting = entity.getComponent(TargetingComponent);
+        return {
+          getTargets: () => {
+            if (!targeting) return [];
+            const targets: Array<{
+              x: number;
+              y: number;
+              distance: number;
+              isLocked: boolean;
+              healthPercent: number;
+            }> = [];
+            for (const [
+              targetId,
+              pos,
+            ] of targeting.targetScreenPositions.entries()) {
+              targets.push({
+                x: pos.x,
+                y: pos.y,
+                distance: pos.distance,
+                isLocked: targetId === targeting.lockedTargetId,
+                healthPercent: pos.healthPercent,
+              });
+            }
+            return targets;
+          },
+          hasLockedTarget: () => targeting?.hasLockedTarget() ?? false,
+        };
+      },
     };
   }
 
