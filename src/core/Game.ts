@@ -21,7 +21,7 @@ import {
   CameraSystem,
   MechAnimationSystem,
   AudioSystem,
-  DebugTerrainSystem,
+  MapSystem,
   TurretAISystem,
   TargetingSystem,
 } from '../systems';
@@ -34,6 +34,8 @@ import { MechConfigs } from '../config/MechConfigs';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { CAMERA_CONFIG } from '../config/CameraConfig';
 import { RENDERING_CONFIG } from '../config/RenderingConfig';
+import { getMapById } from '../config/maps';
+import type { MapConfig } from '../config/maps';
 
 // Import components for HUD access
 import { HeatComponent } from '../components/HeatComponent';
@@ -68,15 +70,20 @@ export class Game {
   // Systems that need special access
   private cameraSystem!: CameraSystem;
   private renderSystem!: RenderSystem;
-  private terrainSystem!: DebugTerrainSystem;
+  private mapSystem!: MapSystem;
+
+  // Map configuration
+  private mapConfig!: MapConfig;
 
   private lastTime: number = 0;
   private accumulator: number = 0;
   private isRunning: boolean = false;
   private audioInitialized: boolean = false;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, mapId: string) {
     this.container = container;
+    // Load map config from provided ID
+    this.mapConfig = getMapById(mapId);
   }
 
   async init(): Promise<void> {
@@ -131,28 +138,41 @@ export class Game {
 
     this.world.addSystem(new AudioSystem(this.soundManager));
 
-    this.terrainSystem = new DebugTerrainSystem(this.scene, this.physicsWorld);
-    this.world.addSystem(this.terrainSystem);
+    // Create map system with loaded config
+    this.mapSystem = new MapSystem(
+      this.scene,
+      this.physicsWorld,
+      this.mapConfig
+    );
+    this.world.addSystem(this.mapSystem);
 
-    // Get initial terrain height for spawn (using centralized config)
-    const terrainHeight = this.terrainSystem.getHeightAt(0, 0);
-    const spawnHeight = terrainHeight + GAME_CONFIG.SPAWN_HEIGHT_OFFSET;
+    // Log loaded map
+    console.log(`Loaded map: ${this.mapConfig.name} (${this.mapConfig.id})`);
 
-    // Create player mech entity
+    // Spawn player at map-defined position
+    const playerSpawn = this.mapConfig.playerSpawn;
+    const terrainHeight = this.mapSystem.getHeightAt(
+      playerSpawn.position.x,
+      playerSpawn.position.z
+    );
+    const spawnHeight = terrainHeight + playerSpawn.position.y;
+
     this.playerEntity = createMech(
       'player-1',
       MechConfigs.ATLAS,
       this.physicsWorld,
-      new THREE.Vector3(0, spawnHeight, 0),
+      new THREE.Vector3(
+        playerSpawn.position.x,
+        spawnHeight,
+        playerSpawn.position.z
+      ),
       true
     );
     this.world.addEntity(this.playerEntity);
 
-    // Spawn test targets for damage testing
-    this.spawnTestTargets();
-
-    // Spawn enemy turrets
-    this.spawnTurrets();
+    // Spawn entities defined in map config
+    this.spawnMapTargets();
+    this.spawnMapTurrets();
 
     // Setup HUD with entity reference wrapper
     this.hud = new HUD(this.container, this.createMechInterface());
@@ -302,24 +322,25 @@ export class Game {
   }
 
   private setupLighting(): void {
-    const { LIGHTING, SHADOWS } = RENDERING_CONFIG;
+    const { SHADOWS } = RENDERING_CONFIG;
+    const { lighting } = this.mapConfig.environment;
 
-    // Simple ambient light for base illumination
+    // Use map-specific lighting configuration
     this.ambientLight = new THREE.AmbientLight(
-      LIGHTING.ambient.color,
-      LIGHTING.ambient.intensity
+      lighting.ambientColor,
+      lighting.ambientIntensity
     );
     this.scene.add(this.ambientLight);
 
-    // Main directional light (sun)
+    // Main directional light (sun) with map-specific settings
     this.directionalLight = new THREE.DirectionalLight(
-      LIGHTING.directional.color,
-      LIGHTING.directional.intensity
+      lighting.directionalColor,
+      lighting.directionalIntensity
     );
     this.directionalLight.position.set(
-      LIGHTING.directional.position.x,
-      LIGHTING.directional.position.y,
-      LIGHTING.directional.position.z
+      lighting.sunPosition.x,
+      lighting.sunPosition.y,
+      lighting.sunPosition.z
     );
     this.directionalLight.castShadow = true;
     this.directionalLight.shadow.mapSize.width = SHADOWS.mapSize;
@@ -419,58 +440,82 @@ export class Game {
   }
 
   /**
-   * Spawn test targets at various distances for damage testing
+   * Spawn targets defined in the map configuration
    */
-  private spawnTestTargets(): void {
-    // Player spawn position (targets will face this)
-    const playerSpawn = new THREE.Vector3(0, 0, 0);
+  private spawnMapTargets(): void {
+    const { playerSpawn, targets } = this.mapConfig;
+    const playerPos = new THREE.Vector3(
+      playerSpawn.position.x,
+      0,
+      playerSpawn.position.z
+    );
 
-    // Target positions: spread out in front of spawn at varying distances
-    const targetPositions = [
-      { x: 0, z: -20 }, // Close target - 20m
-      { x: -15, z: -40 }, // Medium left - 40m
-      { x: 15, z: -40 }, // Medium right - 40m
-      { x: 0, z: -60 }, // Far center - 60m
-      { x: -25, z: -80 }, // Far left - 80m
-    ];
+    targets.forEach((targetConfig, index) => {
+      const terrainHeight = this.mapSystem.getHeightAt(
+        targetConfig.position.x,
+        targetConfig.position.z
+      );
+      const targetHeight = terrainHeight + targetConfig.position.y;
 
-    targetPositions.forEach((pos, index) => {
-      const terrainHeight = this.terrainSystem.getHeightAt(pos.x, pos.z);
-      const targetHeight = terrainHeight + 6; // Center of 12m wall
+      const faceToward = targetConfig.faceToward
+        ? new THREE.Vector3(
+            targetConfig.faceToward.x,
+            targetConfig.faceToward.y,
+            targetConfig.faceToward.z
+          )
+        : playerPos;
+
+      // Only include health in config if explicitly set
+      const config =
+        targetConfig.health !== undefined
+          ? { health: targetConfig.health }
+          : {};
 
       const target = createTarget(
         `target-${index + 1}`,
         this.physicsWorld,
-        new THREE.Vector3(pos.x, targetHeight, pos.z),
-        {}, // default config
-        playerSpawn // face toward player spawn
+        new THREE.Vector3(
+          targetConfig.position.x,
+          targetHeight,
+          targetConfig.position.z
+        ),
+        config,
+        faceToward
       );
       this.world.addEntity(target);
     });
   }
 
   /**
-   * Spawn enemy turrets at fixed positions east of spawn
+   * Spawn turrets defined in the map configuration
    */
-  private spawnTurrets(): void {
-    // Turret positions: 200 meters east of spawn point
-    const turretPositions = [
-      { x: 200, z: -20 }, // East, slightly forward
-      { x: 200, z: 0 }, // Due east
-      { x: 200, z: 20 }, // East, slightly back
-    ];
+  private spawnMapTurrets(): void {
+    const { turrets } = this.mapConfig;
 
-    turretPositions.forEach((pos, index) => {
-      const terrainHeight = this.terrainSystem.getHeightAt(pos.x, pos.z);
+    turrets.forEach((turretConfig, index) => {
+      const terrainHeight = this.mapSystem.getHeightAt(
+        turretConfig.position.x,
+        turretConfig.position.z
+      );
+
+      // Build config with only defined values
+      const config: Parameters<typeof createTurret>[3] = {};
+      if (turretConfig.detectionRange !== undefined)
+        config.detectionRange = turretConfig.detectionRange;
+      if (turretConfig.weaponType !== undefined)
+        config.weaponType = turretConfig.weaponType;
+      if (turretConfig.health !== undefined)
+        config.health = turretConfig.health;
 
       const turret = createTurret(
         `turret-${index + 1}`,
         this.physicsWorld,
-        new THREE.Vector3(pos.x, terrainHeight, pos.z),
-        {
-          detectionRange: 80, // Can detect player from 80m
-          weaponType: index === 1 ? 'laser' : 'autocannon', // Mix of weapon types
-        }
+        new THREE.Vector3(
+          turretConfig.position.x,
+          terrainHeight + turretConfig.position.y,
+          turretConfig.position.z
+        ),
+        config
       );
       this.world.addEntity(turret);
     });
@@ -488,5 +533,19 @@ export class Game {
    */
   getPlayer(): Entity {
     return this.playerEntity;
+  }
+
+  /**
+   * Get the current map configuration
+   */
+  getMapConfig(): MapConfig {
+    return this.mapConfig;
+  }
+
+  /**
+   * Get the map system for terrain queries
+   */
+  getMapSystem(): MapSystem {
+    return this.mapSystem;
   }
 }

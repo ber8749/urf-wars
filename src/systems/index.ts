@@ -12,5 +12,6 @@ export { CameraSystem } from './CameraSystem';
 export { MechAnimationSystem } from './MechAnimationSystem';
 export { AudioSystem } from './AudioSystem';
 export { DebugTerrainSystem } from './DebugTerrainSystem';
+export { MapSystem } from './MapSystem';
 export { TurretAISystem } from './TurretAISystem';
 export { TargetingSystem } from './TargetingSystem';
