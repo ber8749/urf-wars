@@ -115,3 +115,17 @@ export const MechConfigs: Record<string, MechConfig> = {
     ],
   },
 };
+
+/**
+ * Get list of available mech IDs.
+ */
+export function getAvailableMechIds(): string[] {
+  return Object.keys(MechConfigs);
+}
+
+/**
+ * Get a mech config by ID with fallback to ATLAS.
+ */
+export function getMechById(id: string): MechConfig {
+  return MechConfigs[id] ?? MechConfigs.ATLAS;
+}

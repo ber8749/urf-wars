@@ -30,7 +30,7 @@ import {
 import { createMech } from '../archetypes/createMech';
 import { createTarget } from '../archetypes/createTarget';
 import { createTurret } from '../archetypes/createTurret';
-import { MechConfigs } from '../config/MechConfigs';
+import { getMechById } from '../config/MechConfigs';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { CAMERA_CONFIG } from '../config/CameraConfig';
 import { RENDERING_CONFIG } from '../config/RenderingConfig';
@@ -75,15 +75,20 @@ export class Game {
   // Map configuration
   private mapConfig!: MapConfig;
 
+  // Mech selection
+  private mechId: string;
+
   private lastTime: number = 0;
   private accumulator: number = 0;
   private isRunning: boolean = false;
   private audioInitialized: boolean = false;
 
-  constructor(container: HTMLElement, mapId: string) {
+  constructor(container: HTMLElement, mapId: string, mechId: string = 'ATLAS') {
     this.container = container;
     // Load map config from provided ID
     this.mapConfig = getMapById(mapId);
+    // Store mech selection
+    this.mechId = mechId;
   }
 
   async init(): Promise<void> {
@@ -146,8 +151,10 @@ export class Game {
     );
     this.world.addSystem(this.mapSystem);
 
-    // Log loaded map
+    // Log loaded map and mech
+    const mechConfig = getMechById(this.mechId);
     console.log(`Loaded map: ${this.mapConfig.name} (${this.mapConfig.id})`);
+    console.log(`Deploying mech: ${mechConfig.name}`);
 
     // Spawn player at map-defined position
     const playerSpawn = this.mapConfig.playerSpawn;
@@ -159,7 +166,7 @@ export class Game {
 
     this.playerEntity = createMech(
       'player-1',
-      MechConfigs.ATLAS,
+      mechConfig,
       this.physicsWorld,
       new THREE.Vector3(
         playerSpawn.position.x,

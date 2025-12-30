@@ -1,35 +1,46 @@
 import { MAP_REGISTRY, getAvailableMapIds } from '../config/maps';
 import type { MapConfig } from '../config/maps';
+import { MechConfigs, getAvailableMechIds } from '../config/MechConfigs';
+import type { MechConfig } from '../types';
 
 /**
- * Map selection screen shown on game load.
- * Allows player to choose which map to play.
+ * Mission selection screen shown on game load.
+ * Allows player to choose map and mech before deploying.
  */
-export class MapSelectScreen {
+export class MissionSelectScreen {
   private container: HTMLElement;
   private screenElement: HTMLElement;
   private selectedMapId: string | null = null;
-  private onMapSelect: (mapId: string) => void;
+  private selectedMechId: string | null = null;
+  private onMissionSelect: (mapId: string, mechId: string) => void;
 
-  constructor(container: HTMLElement, onMapSelect: (mapId: string) => void) {
+  constructor(
+    container: HTMLElement,
+    onMissionSelect: (mapId: string, mechId: string) => void
+  ) {
     this.container = container;
-    this.onMapSelect = onMapSelect;
+    this.onMissionSelect = onMissionSelect;
     this.screenElement = this.createScreen();
     this.container.appendChild(this.screenElement);
   }
 
   private createScreen(): HTMLElement {
     const screen = document.createElement('div');
-    screen.id = 'map-select-screen';
+    screen.id = 'mission-select-screen';
 
     const mapIds = getAvailableMapIds();
     const mapCardsHtml = mapIds
       .map((id) => this.createMapCardHtml(MAP_REGISTRY[id]))
       .join('');
 
+    const mechIds = getAvailableMechIds();
+    const mechCardsHtml = mechIds
+      .map((id) => this.createMechCardHtml(id, MechConfigs[id]))
+      .join('');
+
     screen.innerHTML = `
       <style>
-        #map-select-screen {
+        #mission-select-screen {
           position: absolute;
           top: 0;
           left: 0;
@@ -42,13 +53,14 @@ export class MapSelectScreen {
           align-items: center;
           z-index: 2000;
           font-family: 'Courier New', monospace;
-          overflow: hidden;
+          overflow-y: auto;
+          overflow-x: hidden;
         }
 
         /* Animated background grid */
-        #map-select-screen::before {
+        #mission-select-screen::before {
           content: '';
-          position: absolute;
+          position: fixed;
           top: 0;
           left: 0;
           width: 200%;
@@ -67,9 +79,9 @@ export class MapSelectScreen {
         }
 
         /* Scanline effect */
-        #map-select-screen::after {
+        #mission-select-screen::after {
           content: '';
-          position: absolute;
+          position: fixed;
           top: 0;
           left: 0;
           width: 100%;
@@ -85,14 +97,15 @@ export class MapSelectScreen {
           z-index: 1;
         }
 
-        .map-select-content {
+        .mission-select-content {
           position: relative;
           z-index: 2;
           text-align: center;
           padding: 40px;
+          max-width: 1400px;
         }
 
-        .map-select-title {
+        .mission-select-title {
           color: #00ff88;
           font-size: 48px;
           font-weight: bold;
@@ -109,24 +122,47 @@ export class MapSelectScreen {
           100% { text-shadow: 0 0 40px #00ff88, 0 0 80px rgba(0, 255, 136, 0.6); }
         }
 
-        .map-select-subtitle {
+        .mission-select-subtitle {
           color: #668866;
           font-size: 14px;
           letter-spacing: 6px;
-          margin-bottom: 50px;
+          margin-bottom: 40px;
           text-transform: uppercase;
         }
 
-        .map-grid {
-          display: flex;
-          gap: 30px;
-          justify-content: center;
-          flex-wrap: wrap;
-          max-width: 1200px;
+        .section-title {
+          color: #00ff88;
+          font-size: 16px;
+          font-weight: bold;
+          letter-spacing: 4px;
+          margin-bottom: 20px;
+          text-transform: uppercase;
+          opacity: 0.8;
         }
 
-        .map-card {
-          width: 320px;
+        .selection-row {
+          display: flex;
+          gap: 60px;
+          justify-content: center;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .selection-section {
+          flex: 1;
+          min-width: 300px;
+          max-width: 600px;
+        }
+
+        .map-grid, .mech-grid {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .map-card, .mech-card {
+          width: 280px;
           background: linear-gradient(145deg, #0a1a0a 0%, #0d2818 100%);
           border: 2px solid #00ff8844;
           border-radius: 12px;
@@ -137,30 +173,30 @@ export class MapSelectScreen {
           position: relative;
         }
 
-        .map-card:hover {
+        .map-card:hover, .mech-card:hover {
           border-color: #00ff88;
-          transform: translateY(-8px) scale(1.02);
+          transform: translateY(-6px) scale(1.02);
           box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.4),
-            0 0 30px rgba(0, 255, 136, 0.2),
-            inset 0 0 60px rgba(0, 255, 136, 0.05);
+            0 15px 30px rgba(0, 0, 0, 0.4),
+            0 0 25px rgba(0, 255, 136, 0.2),
+            inset 0 0 50px rgba(0, 255, 136, 0.05);
         }
 
-        .map-card.selected {
+        .map-card.selected, .mech-card.selected {
           border-color: #00ff88;
           box-shadow: 
             0 0 40px rgba(0, 255, 136, 0.4),
             inset 0 0 60px rgba(0, 255, 136, 0.1);
         }
 
-        .map-preview {
+        .map-preview, .mech-preview {
           width: 100%;
-          height: 160px;
+          height: 120px;
           position: relative;
           overflow: hidden;
         }
 
-        .map-preview-gradient {
+        .map-preview-gradient, .mech-preview-gradient {
           position: absolute;
           top: 0;
           left: 0;
@@ -171,59 +207,103 @@ export class MapSelectScreen {
           justify-content: center;
         }
 
-        .map-preview-icon {
-          font-size: 48px;
+        .mech-preview-gradient {
+          background: linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 100%);
+        }
+
+        .map-preview-icon, .mech-preview-icon {
+          font-size: 42px;
           opacity: 0.8;
         }
 
-        .map-info {
-          padding: 20px;
+        .map-info, .mech-info {
+          padding: 16px;
         }
 
-        .map-name {
+        .map-name, .mech-name {
           color: #00ff88;
-          font-size: 20px;
+          font-size: 18px;
           font-weight: bold;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           letter-spacing: 2px;
           text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
         }
 
-        .map-description {
+        .map-description, .mech-class {
           color: #88aa88;
-          font-size: 12px;
-          line-height: 1.6;
-          margin-bottom: 16px;
-          min-height: 40px;
+          font-size: 11px;
+          line-height: 1.5;
+          margin-bottom: 12px;
+          min-height: 32px;
         }
 
-        .map-stats {
+        .mech-class {
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          min-height: auto;
+          margin-bottom: 14px;
+        }
+
+        .map-stats, .mech-stats {
           display: flex;
-          gap: 20px;
+          gap: 12px;
           justify-content: center;
           padding-top: 12px;
           border-top: 1px solid #00ff8833;
+          flex-wrap: wrap;
         }
 
-        .map-stat {
+        .map-stat, .mech-stat {
           text-align: center;
+          min-width: 50px;
         }
 
-        .map-stat-value {
+        .map-stat-value, .mech-stat-value {
           color: #00ff88;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: bold;
         }
 
-        .map-stat-label {
+        .map-stat-label, .mech-stat-label {
           color: #446644;
-          font-size: 10px;
+          font-size: 9px;
           letter-spacing: 1px;
           text-transform: uppercase;
         }
 
+        .mech-weapons {
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid #00ff8822;
+        }
+
+        .mech-weapons-label {
+          color: #446644;
+          font-size: 9px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .mech-weapons-list {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .weapon-tag {
+          background: #00ff8822;
+          color: #00ff88;
+          font-size: 10px;
+          padding: 3px 8px;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
         .launch-button {
-          margin-top: 40px;
+          margin-top: 35px;
           padding: 18px 60px;
           background: linear-gradient(145deg, #0d2818 0%, #1a4030 100%);
           border: 2px solid #00ff88;
@@ -258,7 +338,7 @@ export class MapSelectScreen {
         }
 
         .footer-hint {
-          margin-top: 30px;
+          margin-top: 25px;
           color: #446644;
           font-size: 12px;
           letter-spacing: 2px;
@@ -266,11 +346,12 @@ export class MapSelectScreen {
 
         /* Decorative corner accents */
         .corner-accent {
-          position: absolute;
+          position: fixed;
           width: 60px;
           height: 60px;
           border: 2px solid #00ff8833;
           pointer-events: none;
+          z-index: 3;
         }
 
         .corner-accent.tl {
@@ -307,12 +388,24 @@ export class MapSelectScreen {
       <div class="corner-accent bl"></div>
       <div class="corner-accent br"></div>
 
-      <div class="map-select-content">
-        <h1 class="map-select-title">URF WARS</h1>
-        <div class="map-select-subtitle">Select Battle Zone</div>
+      <div class="mission-select-content">
+        <h1 class="mission-select-title">URF WARS</h1>
+        <div class="mission-select-subtitle">Mission Briefing</div>
 
-        <div class="map-grid">
-          ${mapCardsHtml}
+        <div class="selection-row">
+          <div class="selection-section">
+            <div class="section-title">Select Mech</div>
+            <div class="mech-grid">
+              ${mechCardsHtml}
+            </div>
+          </div>
+
+          <div class="selection-section">
+            <div class="section-title">Select Battle Zone</div>
+            <div class="map-grid">
+              ${mapCardsHtml}
+            </div>
+          </div>
         </div>
 
         <button class="launch-button" id="launch-btn">
@@ -320,7 +413,7 @@ export class MapSelectScreen {
         </button>
 
         <div class="footer-hint">
-          Click a map to select, then deploy
+          Select a mech and map, then deploy
         </div>
       </div>
     `;
@@ -380,6 +473,69 @@ export class MapSelectScreen {
     `;
   }
 
+  private createMechCardHtml(id: string, mech: MechConfig): string {
+    // Mech-specific icons
+    const iconMap: Record<string, string> = {
+      ATLAS: '⬡',
+      MADCAT: '◇',
+      URBANMECH: '○',
+    };
+    const icon = iconMap[id] || '◈';
+
+    // Calculate total armor
+    const totalArmor = Object.values(mech.baseArmor).reduce((a, b) => a + b, 0);
+
+    // Get unique weapon types
+    const weaponTypes = [...new Set(mech.hardpoints.map((h) => h.weaponType))];
+    const weaponTagsHtml = weaponTypes
+      .map((type) => `<span class="weapon-tag">${type}</span>`)
+      .join('');
+
+    // Determine mech class based on mass
+    let mechClass = 'Light';
+    if (mech.mass >= 80) mechClass = 'Assault';
+    else if (mech.mass >= 60) mechClass = 'Heavy';
+    else if (mech.mass >= 40) mechClass = 'Medium';
+
+    return `
+      <div class="mech-card" data-mech-id="${id}">
+        <div class="mech-preview">
+          <div class="mech-preview-gradient">
+            <span class="mech-preview-icon">${icon}</span>
+          </div>
+        </div>
+        <div class="mech-info">
+          <div class="mech-name">${mech.name}</div>
+          <div class="mech-class">${mechClass} - ${mech.mass} tons</div>
+          <div class="mech-stats">
+            <div class="mech-stat">
+              <div class="mech-stat-value">${mech.maxSpeed}</div>
+              <div class="mech-stat-label">Speed</div>
+            </div>
+            <div class="mech-stat">
+              <div class="mech-stat-value">${totalArmor}</div>
+              <div class="mech-stat-label">Armor</div>
+            </div>
+            <div class="mech-stat">
+              <div class="mech-stat-value">${mech.maxHeat}</div>
+              <div class="mech-stat-label">Heat Cap</div>
+            </div>
+            <div class="mech-stat">
+              <div class="mech-stat-value">${mech.hardpoints.length}</div>
+              <div class="mech-stat-label">Weapons</div>
+            </div>
+          </div>
+          <div class="mech-weapons">
+            <div class="mech-weapons-label">Loadout</div>
+            <div class="mech-weapons-list">
+              ${weaponTagsHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private hexToRgb(hex: number): { r: number; g: number; b: number } {
     return {
       r: (hex >> 16) & 255,
@@ -390,45 +546,51 @@ export class MapSelectScreen {
 
   private setupEventListeners(screen: HTMLElement): void {
     const mapCards = screen.querySelectorAll('.map-card');
+    const mechCards = screen.querySelectorAll('.mech-card');
     const launchBtn = screen.querySelector('#launch-btn') as HTMLButtonElement;
+
+    const updateLaunchButton = () => {
+      if (this.selectedMapId && this.selectedMechId) {
+        launchBtn.classList.add('enabled');
+      } else {
+        launchBtn.classList.remove('enabled');
+      }
+    };
 
     mapCards.forEach((card) => {
       card.addEventListener('click', () => {
-        // Deselect all
         mapCards.forEach((c) => c.classList.remove('selected'));
-
-        // Select this one
         card.classList.add('selected');
         this.selectedMapId = card.getAttribute('data-map-id');
+        updateLaunchButton();
+      });
+    });
 
-        // Enable launch button
-        launchBtn.classList.add('enabled');
+    mechCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        mechCards.forEach((c) => c.classList.remove('selected'));
+        card.classList.add('selected');
+        this.selectedMechId = card.getAttribute('data-mech-id');
+        updateLaunchButton();
       });
     });
 
     launchBtn.addEventListener('click', () => {
-      if (this.selectedMapId) {
+      if (this.selectedMapId && this.selectedMechId) {
         this.launch();
       }
     });
 
     // Keyboard support
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Enter' && this.selectedMapId) {
+      if (e.code === 'Enter' && this.selectedMapId && this.selectedMechId) {
         this.launch();
-      }
-
-      // Number keys for quick select
-      const num = parseInt(e.key);
-      if (num >= 1 && num <= mapCards.length) {
-        const card = mapCards[num - 1] as HTMLElement;
-        card.click();
       }
     });
   }
 
   private launch(): void {
-    if (!this.selectedMapId) return;
+    if (!this.selectedMapId || !this.selectedMechId) return;
 
     // Add launch animation
     this.screenElement.style.transition =
@@ -437,7 +599,7 @@ export class MapSelectScreen {
     this.screenElement.style.transform = 'scale(1.1)';
 
     setTimeout(() => {
-      this.onMapSelect(this.selectedMapId!);
+      this.onMissionSelect(this.selectedMapId!, this.selectedMechId!);
       this.hide();
     }, 500);
   }

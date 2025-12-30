@@ -10,10 +10,30 @@ import { HealthComponent } from '../components/HealthComponent';
 import { InputComponent } from '../components/InputComponent';
 import { TargetingComponent } from '../components/TargetingComponent';
 import { MechModel } from '../rendering/MechModel';
+import { MadCatModel } from '../rendering/MadCatModel';
+import { UrbanMechModel } from '../rendering/UrbanMechModel';
 import { PostProcessing } from '../rendering/PostProcessing';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { MechConfig } from '../types';
 import { MECH_CONSTANTS } from '../config/MechConfigs';
+
+/** Common interface for all mech models */
+type MechModelType = MechModel | MadCatModel | UrbanMechModel;
+
+/**
+ * Create the appropriate visual model for a mech based on its config.
+ */
+function createMechModel(config: MechConfig): MechModelType {
+  switch (config.name) {
+    case 'Mad Cat':
+      return new MadCatModel();
+    case 'UrbanMech':
+      return new UrbanMechModel();
+    case 'Atlas':
+    default:
+      return new MechModel();
+  }
+}
 
 /**
  * Create a mech entity with all required components.
@@ -61,8 +81,8 @@ export function createMech(
   // Lock rotation on X and Z axes (mech stays upright)
   body.setEnabledRotations(false, true, false, true);
 
-  // Create visual model
-  const model = new MechModel();
+  // Create visual model based on mech type
+  const model = createMechModel(config);
 
   // Mark mech for cel-shading outline
   PostProcessing.markForOutline(model.mesh);
