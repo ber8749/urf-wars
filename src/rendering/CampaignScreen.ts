@@ -116,7 +116,8 @@ export class CampaignScreen {
           position: relative;
           z-index: 2;
           width: 100%;
-          max-width: 900px;
+          padding: 0 60px;
+          box-sizing: border-box;
         }
 
         .campaign-header {
@@ -323,6 +324,93 @@ export class CampaignScreen {
         .corner-accent.tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
         .corner-accent.bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
         .corner-accent.br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+        /* Responsive styles */
+        @media (max-width: 900px) {
+          .campaign-content {
+            padding: 0 30px;
+          }
+          .campaign-title {
+            font-size: 28px;
+            letter-spacing: 4px;
+          }
+          .mission-card {
+            padding: 16px 18px;
+            gap: 14px;
+          }
+          .mission-number {
+            width: 42px;
+            height: 42px;
+            font-size: 20px;
+          }
+          .mission-title {
+            font-size: 16px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          #campaign-screen {
+            padding: 30px 16px;
+          }
+          .campaign-content {
+            padding: 0;
+          }
+          .campaign-header {
+            margin-bottom: 24px;
+          }
+          .campaign-title {
+            font-size: 22px;
+            letter-spacing: 2px;
+          }
+          .campaign-subtitle {
+            font-size: 11px;
+            letter-spacing: 2px;
+          }
+          .mission-card {
+            padding: 14px;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
+          .mission-number {
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+          }
+          .mission-info {
+            flex: 1;
+            min-width: 0;
+          }
+          .mission-title {
+            font-size: 14px;
+            letter-spacing: 1px;
+          }
+          .mission-desc {
+            font-size: 11px;
+          }
+          .mission-status {
+            width: 100%;
+            text-align: left;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #00ff8822;
+          }
+          .back-button {
+            width: 100%;
+            padding: 12px 20px;
+          }
+          .corner-accent {
+            width: 40px;
+            height: 40px;
+          }
+          .corner-accent.tl, .corner-accent.tr,
+          .corner-accent.bl, .corner-accent.br {
+            top: 10px;
+            left: 10px;
+          }
+          .corner-accent.tr { left: auto; right: 10px; }
+          .corner-accent.bl { top: auto; bottom: 10px; }
+          .corner-accent.br { top: auto; bottom: 10px; left: auto; right: 10px; }
+        }
       </style>
 
       <div class="corner-accent tl"></div>

@@ -93,8 +93,9 @@ export class MapSelectScreen {
           position: relative;
           z-index: 2;
           text-align: center;
-          padding: 40px;
-          max-width: 1000px;
+          padding: 40px 60px;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .map-select-title {
@@ -282,6 +283,71 @@ export class MapSelectScreen {
           font-size: 12px;
           letter-spacing: 3px;
           margin-bottom: 10px;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+          .map-card {
+            width: 280px;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .map-select-content {
+            padding: 30px 30px;
+          }
+          .map-select-title {
+            font-size: 28px;
+            letter-spacing: 4px;
+          }
+          .map-card {
+            width: 260px;
+          }
+          .map-preview {
+            height: 120px;
+          }
+          .button-row {
+            flex-direction: column;
+            gap: 12px;
+          }
+          .back-button, .continue-button {
+            width: 100%;
+            max-width: 300px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .map-select-content {
+            padding: 20px 16px;
+          }
+          .map-select-title {
+            font-size: 22px;
+            letter-spacing: 2px;
+          }
+          .map-select-subtitle {
+            font-size: 11px;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+          }
+          .map-grid {
+            gap: 16px;
+          }
+          .map-card {
+            width: 100%;
+            max-width: 320px;
+          }
+          .corner-accent {
+            width: 40px;
+            height: 40px;
+          }
+          .corner-accent.tl, .corner-accent.tr,
+          .corner-accent.bl, .corner-accent.br {
+            top: 10px;
+            left: 10px;
+          }
+          .corner-accent.tr { left: auto; right: 10px; }
+          .corner-accent.bl { top: auto; bottom: 10px; }
+          .corner-accent.br { top: auto; bottom: 10px; left: auto; right: 10px; }
         }
       </style>
 

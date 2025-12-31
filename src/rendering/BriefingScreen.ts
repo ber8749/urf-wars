@@ -128,16 +128,95 @@ export class BriefingScreen {
           position: relative;
           z-index: 2;
           width: 100%;
-          max-width: 1000px;
+          padding: 0 60px;
+          box-sizing: border-box;
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 30px;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1000px) {
           .briefing-content {
             grid-template-columns: 1fr;
+            padding: 0 30px;
           }
+          .mission-title {
+            font-size: 32px;
+            letter-spacing: 4px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          #briefing-screen {
+            padding: 20px 16px;
+          }
+          .briefing-content {
+            padding: 0;
+            gap: 20px;
+          }
+          .mission-number {
+            font-size: 12px;
+            letter-spacing: 3px;
+          }
+          .mission-title {
+            font-size: 24px;
+            letter-spacing: 2px;
+          }
+          .briefing-section, .mech-section {
+            padding: 16px;
+          }
+          .section-title {
+            font-size: 12px;
+            letter-spacing: 2px;
+          }
+          .briefing-text {
+            font-size: 12px;
+            max-height: 150px;
+          }
+          .objective {
+            padding: 8px 10px;
+          }
+          .objective-text {
+            font-size: 12px;
+          }
+          .mech-card {
+            padding: 12px;
+            gap: 12px;
+          }
+          .mech-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 22px;
+          }
+          .mech-name {
+            font-size: 14px;
+          }
+          .mech-stats {
+            gap: 8px;
+          }
+          .mech-stat-value {
+            font-size: 12px;
+          }
+          .button-row {
+            flex-direction: column;
+            gap: 12px;
+          }
+          .back-button, .launch-button {
+            width: 100%;
+            padding: 14px 20px;
+          }
+          .corner-accent {
+            width: 40px;
+            height: 40px;
+          }
+          .corner-accent.tl, .corner-accent.tr,
+          .corner-accent.bl, .corner-accent.br {
+            top: 10px;
+            left: 10px;
+          }
+          .corner-accent.tr { left: auto; right: 10px; }
+          .corner-accent.bl { top: auto; bottom: 10px; }
+          .corner-accent.br { top: auto; bottom: 10px; left: auto; right: 10px; }
         }
 
         .briefing-header {

@@ -108,8 +108,9 @@ export class MechSelectScreen {
           position: relative;
           z-index: 2;
           text-align: center;
-          padding: 40px;
-          max-width: 1100px;
+          padding: 40px 60px;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .mech-select-title {
@@ -330,6 +331,80 @@ export class MechSelectScreen {
           font-size: 12px;
           letter-spacing: 3px;
           margin-bottom: 10px;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+          .mech-card {
+            width: 280px;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .mech-select-content {
+            padding: 30px 30px;
+          }
+          .mech-select-title {
+            font-size: 28px;
+            letter-spacing: 4px;
+          }
+          .mech-card {
+            width: 260px;
+          }
+          .mech-preview {
+            height: 120px;
+          }
+          .mech-preview-icon {
+            font-size: 48px;
+          }
+          .button-row {
+            flex-direction: column;
+            gap: 12px;
+          }
+          .back-button, .deploy-button {
+            width: 100%;
+            max-width: 300px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .mech-select-content {
+            padding: 20px 16px;
+          }
+          .mech-select-title {
+            font-size: 22px;
+            letter-spacing: 2px;
+          }
+          .mech-select-subtitle {
+            font-size: 11px;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+          }
+          .mech-grid {
+            gap: 16px;
+          }
+          .mech-card {
+            width: 100%;
+            max-width: 320px;
+          }
+          .mech-name {
+            font-size: 18px;
+          }
+          .mech-stats {
+            gap: 8px;
+          }
+          .corner-accent {
+            width: 40px;
+            height: 40px;
+          }
+          .corner-accent.tl, .corner-accent.tr,
+          .corner-accent.bl, .corner-accent.br {
+            top: 10px;
+            left: 10px;
+          }
+          .corner-accent.tr { left: auto; right: 10px; }
+          .corner-accent.bl { top: auto; bottom: 10px; }
+          .corner-accent.br { top: auto; bottom: 10px; left: auto; right: 10px; }
         }
       </style>
 

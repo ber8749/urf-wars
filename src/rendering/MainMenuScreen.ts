@@ -267,6 +267,85 @@ export class MainMenuScreen {
           z-index: 0;
           transform: rotate(-15deg);
         }
+
+        /* Responsive styles */
+        @media (max-width: 900px) {
+          .main-menu-title {
+            font-size: 56px;
+            letter-spacing: 10px;
+          }
+          .menu-button {
+            width: 280px;
+          }
+          .mech-silhouette {
+            font-size: 300px;
+            right: -80px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .main-menu-content {
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .main-menu-title {
+            font-size: 36px;
+            letter-spacing: 6px;
+          }
+          .main-menu-subtitle {
+            font-size: 11px;
+            letter-spacing: 4px;
+            margin-bottom: 40px;
+          }
+          .menu-button {
+            width: 100%;
+            max-width: 320px;
+          }
+          .menu-button-inner {
+            padding: 18px 20px;
+            gap: 14px;
+          }
+          .menu-button-icon {
+            font-size: 28px;
+            width: 40px;
+          }
+          .menu-button-title {
+            font-size: 16px;
+            letter-spacing: 2px;
+          }
+          .menu-button-desc {
+            font-size: 10px;
+          }
+          .corner-accent {
+            width: 50px;
+            height: 50px;
+          }
+          .corner-accent.tl { top: 15px; left: 15px; }
+          .corner-accent.tr { top: 15px; right: 15px; }
+          .corner-accent.bl { bottom: 15px; left: 15px; }
+          .corner-accent.br { bottom: 15px; right: 15px; }
+          .version-info {
+            right: 20px;
+            bottom: 15px;
+            font-size: 10px;
+          }
+          .mech-silhouette {
+            font-size: 200px;
+            right: -60px;
+            bottom: -30px;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .main-menu-title {
+            font-size: 28px;
+            letter-spacing: 4px;
+          }
+          .menu-button-inner {
+            padding: 14px 16px;
+          }
+        }
       </style>
 
       <div class="corner-accent tl"></div>

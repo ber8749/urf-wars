@@ -144,8 +144,10 @@ export class DebriefingScreen {
           position: relative;
           z-index: 2;
           text-align: center;
-          padding: 40px;
-          max-width: 600px;
+          padding: 40px 60px;
+          width: 100%;
+          max-width: 800px;
+          box-sizing: border-box;
         }
 
         .status-icon {
@@ -385,6 +387,80 @@ export class DebriefingScreen {
         .corner-accent.tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
         .corner-accent.bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
         .corner-accent.br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+        /* Responsive styles */
+        @media (max-width: 700px) {
+          .debrief-content {
+            padding: 30px 24px;
+          }
+          .status-icon {
+            font-size: 48px;
+          }
+          .status-text {
+            font-size: 24px;
+            letter-spacing: 4px;
+          }
+          .mission-title {
+            font-size: 14px;
+            letter-spacing: 2px;
+          }
+          .stats-grid {
+            gap: 12px;
+          }
+          .stat-value {
+            font-size: 22px;
+          }
+        }
+
+        @media (max-width: 500px) {
+          .debrief-content {
+            padding: 20px 16px;
+          }
+          .status-icon {
+            font-size: 40px;
+            margin-bottom: 14px;
+          }
+          .status-text {
+            font-size: 20px;
+            letter-spacing: 3px;
+          }
+          .stats-panel, .objectives-panel, .unlocks-section {
+            padding: 16px;
+          }
+          .stat-value {
+            font-size: 20px;
+          }
+          .stat-label {
+            font-size: 9px;
+          }
+          .objective-result {
+            padding: 8px;
+            gap: 8px;
+          }
+          .objective-text {
+            font-size: 12px;
+          }
+          .button-row {
+            flex-direction: column;
+            gap: 10px;
+          }
+          .debrief-button {
+            width: 100%;
+            padding: 12px 20px;
+          }
+          .corner-accent {
+            width: 40px;
+            height: 40px;
+          }
+          .corner-accent.tl, .corner-accent.tr,
+          .corner-accent.bl, .corner-accent.br {
+            top: 10px;
+            left: 10px;
+          }
+          .corner-accent.tr { left: auto; right: 10px; }
+          .corner-accent.bl { top: auto; bottom: 10px; }
+          .corner-accent.br { top: auto; bottom: 10px; left: auto; right: 10px; }
+        }
       </style>
 
       <div class="corner-accent tl"></div>
