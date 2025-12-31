@@ -67,44 +67,11 @@
           content: '...';
         }
       }
-
-      #click-prompt {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #00ff88;
-        font-family: 'Courier New', monospace;
-        font-size: 16px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        padding: 10px 20px;
-        border: 1px solid #00ff88;
-        background: rgba(0, 20, 10, 0.8);
-        animation: pulse 2s infinite;
-        z-index: 1000;
-        pointer-events: none;
-      }
-
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.5;
-        }
-      }
-
-      #click-prompt.hidden {
-        display: none;
-      }
     </style>
   </head>
   <body>
     <div id="game-container">
       <div id="loading">Initializing Systems</div>
-      <div id="click-prompt">Click to enable controls</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
