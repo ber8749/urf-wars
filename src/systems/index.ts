@@ -15,3 +15,4 @@ export { DebugTerrainSystem } from './DebugTerrainSystem';
 export { MapSystem } from './MapSystem';
 export { TurretAISystem } from './TurretAISystem';
 export { TargetingSystem } from './TargetingSystem';
+export { ObjectiveSystem } from './ObjectiveSystem';
