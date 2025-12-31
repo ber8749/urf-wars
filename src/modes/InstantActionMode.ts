@@ -1,17 +1,20 @@
 import { Game } from '../core/Game';
-import { MissionSelectScreen } from '../rendering/MissionSelectScreen';
+import { MapSelectScreen } from '../rendering/MapSelectScreen';
+import { MechSelectScreen } from '../rendering/MechSelectScreen';
 import type { GameMode, GameResult } from './GameMode';
 
 /**
  * Instant Action mode - quick battles with customizable settings.
- * Wraps the existing game flow with map/mech selection.
+ * Flow: Map Select -> Mech Select -> Game
  */
 export class InstantActionMode implements GameMode {
   readonly type = 'instant-action' as const;
 
   private container: HTMLElement;
   private game: Game | null = null;
-  private missionSelect: MissionSelectScreen | null = null;
+  private mapSelectScreen: MapSelectScreen | null = null;
+  private mechSelectScreen: MechSelectScreen | null = null;
+  private selectedMapId: string | null = null;
   private active: boolean = false;
   private startTime: number = 0;
   private onComplete: ((result: GameResult | null) => void) | null = null;
@@ -30,7 +33,7 @@ export class InstantActionMode implements GameMode {
 
   start(): void {
     this.active = true;
-    this.showMissionSelect();
+    this.showMapSelect();
   }
 
   pause(): void {
@@ -55,12 +58,16 @@ export class InstantActionMode implements GameMode {
   dispose(): void {
     this.active = false;
 
-    if (this.missionSelect) {
-      this.missionSelect.dispose();
-      this.missionSelect = null;
+    if (this.mapSelectScreen) {
+      this.mapSelectScreen.dispose();
+      this.mapSelectScreen = null;
     }
 
-    // Note: Game cleanup would need to be added to Game class
+    if (this.mechSelectScreen) {
+      this.mechSelectScreen.dispose();
+      this.mechSelectScreen = null;
+    }
+
     this.game = null;
   }
 
@@ -69,25 +76,55 @@ export class InstantActionMode implements GameMode {
   }
 
   /**
-   * Show the mission/mech selection screen
+   * Step 1: Show map selection screen
    */
-  private showMissionSelect(): void {
-    this.missionSelect = new MissionSelectScreen(
+  private showMapSelect(): void {
+    this.mapSelectScreen = new MapSelectScreen(
       this.container,
-      async (mapId, mechId) => {
-        await this.startGame(mapId, mechId);
+      (mapId) => {
+        this.selectedMapId = mapId;
+        this.showMechSelect(mapId);
+      },
+      () => {
+        // Back button - return to main menu
+        this.active = false;
+        if (this.onComplete) {
+          this.onComplete(null);
+        }
       }
     );
   }
 
   /**
-   * Start the actual game with selected map and mech
+   * Step 2: Show mech selection screen
+   */
+  private showMechSelect(mapId: string): void {
+    if (this.mapSelectScreen) {
+      this.mapSelectScreen = null;
+    }
+
+    this.mechSelectScreen = new MechSelectScreen(
+      this.container,
+      mapId,
+      async (mechId) => {
+        await this.startGame(mapId, mechId);
+      },
+      () => {
+        // Back button - return to map select
+        if (this.mechSelectScreen) {
+          this.mechSelectScreen = null;
+        }
+        this.showMapSelect();
+      }
+    );
+  }
+
+  /**
+   * Step 3: Start the actual game with selected map and mech
    */
   private async startGame(mapId: string, mechId: string): Promise<void> {
-    // Clean up mission select screen
-    if (this.missionSelect) {
-      this.missionSelect.dispose();
-      this.missionSelect = null;
+    if (this.mechSelectScreen) {
+      this.mechSelectScreen = null;
     }
 
     // Create and start the game
