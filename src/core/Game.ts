@@ -44,6 +44,7 @@ import { MechComponent } from '../components/MechComponent';
 import { WeaponComponent } from '../components/WeaponComponent';
 import { HealthComponent } from '../components/HealthComponent';
 import { TargetingComponent } from '../components/TargetingComponent';
+import { TransformComponent } from '../components/TransformComponent';
 import type { Entity } from './Entity';
 
 export class Game {
@@ -232,6 +233,11 @@ export class Game {
         // Use torso yaw for compass heading (where the pilot is looking)
         const mech = entity.getComponent(MechComponent);
         return mech?.torsoYaw ?? 0;
+      },
+      getLegHeading: () => {
+        // Use transform rotation for leg direction
+        const transform = entity.getComponent(TransformComponent);
+        return transform?.rotation.y ?? 0;
       },
       getWeaponSystem: () => {
         const weapons = entity.getComponent(WeaponComponent);

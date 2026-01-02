@@ -47,7 +47,8 @@ interface MechDataProvider {
   getHeatSystem(): HeatSystemInterface;
   getSpeed(): number;
   getMaxSpeed(): number;
-  getHeading(): number; // Returns heading in radians
+  getHeading(): number; // Returns torso heading in radians
+  getLegHeading(): number; // Returns leg heading in radians
   getWeaponSystem(): WeaponSystemInterface;
   getArmorStatus(): ArmorStatus;
   getCameraController?(): CameraControllerInterface;
@@ -82,6 +83,9 @@ export class HUD {
   private compassInitialized: boolean = false;
   private lastCompassHeading: number = 0;
   private continuousHeading: number = 0;
+
+  // Torso alignment indicator
+  private torsoIndicator!: HTMLElement;
 
   private isVisible: boolean = true;
   private lastHeatWarningState: boolean = false;
@@ -119,7 +123,7 @@ export class HUD {
         #hud * {
           pointer-events: none;
         }
-
+        
         /* ========== COCKPIT FRAME ========== */
         .cockpit-frame {
           position: absolute;
@@ -185,7 +189,7 @@ export class HUD {
         .crosshair-line.bottom { width: 2px; height: 10px; left: 50%; bottom: -14px; transform: translateX(-50%); }
         .crosshair-line.left { width: 10px; height: 2px; top: 50%; left: -14px; transform: translateY(-50%); }
         .crosshair-line.right { width: 10px; height: 2px; top: 50%; right: -14px; transform: translateY(-50%); }
-
+        
         .crosshair-dot {
           position: absolute;
           top: 50%;
@@ -197,20 +201,19 @@ export class HUD {
           border-radius: 50%;
           box-shadow: 0 0 8px #00ff88;
         }
-
+        
         /* ========== BOTTOM PANEL ========== */
         .bottom-panel {
           position: absolute;
           bottom: 0;
           left: 50%;
           transform: translateX(-50%);
-          width: calc(100% - 70px);
-          max-width: 1100px;
+          width: auto;
           height: 95px;
           display: flex;
           align-items: stretch;
-          gap: 3px;
-          padding: 8px 12px;
+          gap: 8px;
+          padding: 8px 16px;
           background: linear-gradient(180deg, rgba(12, 18, 14, 0.88) 0%, rgba(8, 12, 10, 0.95) 100%);
           border: 2px solid #2a352a;
           border-bottom: none;
@@ -259,7 +262,7 @@ export class HUD {
           overflow: hidden;
           position: relative;
         }
-
+        
         .heat-bar-fill {
           height: 100%;
           background: linear-gradient(90deg, #00ff88 0%, #88ff00 40%, #ffcc00 70%, #ff4400 100%);
@@ -305,7 +308,7 @@ export class HUD {
           gap: 2px;
           align-content: center;
         }
-
+        
         .armor-zone {
           display: flex;
           align-items: center;
@@ -400,17 +403,17 @@ export class HUD {
           text-align: center;
           transition: all 0.12s ease;
         }
-
+        
         .weapon-slot.selected {
           border-color: #00ff88;
           background: rgba(0, 255, 136, 0.08);
           box-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
         }
-
+        
         .weapon-slot.cooldown {
           opacity: 0.45;
         }
-
+        
         .weapon-slot.empty {
           border-color: #ff4400;
           opacity: 0.35;
@@ -421,7 +424,7 @@ export class HUD {
           font-size: 8px;
           margin-bottom: 1px;
         }
-
+        
         .weapon-name {
           color: #00ff88;
           font-size: 10px;
@@ -432,7 +435,7 @@ export class HUD {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-
+        
         .weapon-slot.selected .weapon-name {
           color: #88ffaa;
         }
@@ -453,17 +456,17 @@ export class HUD {
         .weapon-ammo.low {
           color: #ffcc00;
         }
-
+        
         .weapon-ammo.empty {
           color: #ff4400;
         }
-
+        
         .weapon-ready {
           color: #00ff88;
           font-size: 8px;
           font-weight: bold;
         }
-
+        
         .weapon-cooldown {
           color: #ffcc00;
           font-size: 9px;
@@ -683,6 +686,89 @@ export class HUD {
           border-radius: 2px;
         }
 
+        /* ========== TORSO SECTION ========== */
+        .torso-section {
+          width: 75px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .torso-alignment {
+          width: 55px;
+          height: 55px;
+          background: rgba(0, 10, 5, 0.5);
+          border: 1px solid #3a4a3a;
+          border-radius: 50%;
+          position: relative;
+        }
+
+        .torso-alignment-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+
+        .alignment-ring {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 44px;
+          height: 44px;
+          border: 1px solid #3a4a3a;
+          border-radius: 50%;
+        }
+
+        .alignment-center {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 5px;
+          height: 5px;
+          background: #00ff88;
+          border-radius: 50%;
+          box-shadow: 0 0 4px #00ff88;
+        }
+
+        .leg-indicator {
+          position: absolute;
+          top: 5px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-bottom: 8px solid #4a5a4a;
+        }
+
+        .torso-indicator {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 2px;
+          height: 18px;
+          background: linear-gradient(180deg, #00ff88 0%, transparent 100%);
+          transform-origin: bottom center;
+          transform: translateX(-50%) translateY(-100%);
+          box-shadow: 0 0 4px #00ff88;
+        }
+
+        .torso-indicator::before {
+          content: '';
+          position: absolute;
+          top: -3px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-bottom: 6px solid #00ff88;
+        }
+
         /* ========== WARNING OVERLAY ========== */
         .warning-overlay {
           position: absolute;
@@ -735,8 +821,8 @@ export class HUD {
         @media (max-width: 900px) {
           .bottom-panel {
             height: 85px;
-            padding: 6px 10px;
-            width: calc(100% - 50px);
+            padding: 6px 12px;
+            gap: 6px;
           }
           .heat-section { width: 120px; }
           .armor-section { width: 105px; }
@@ -746,6 +832,10 @@ export class HUD {
           .cockpit-frame { border-width: 20px; }
           .compass-bar { width: 220px; top: 32px; }
           .compass-heading { font-size: 10px; bottom: -16px; }
+          .torso-section { width: 60px; }
+          .torso-alignment { width: 45px; height: 45px; }
+          .alignment-ring { width: 36px; height: 36px; }
+          .torso-indicator { height: 14px; }
           .radar-panel { 
             width: 110px; 
             height: 110px; 
@@ -766,6 +856,16 @@ export class HUD {
           .cockpit-frame { border-width: 14px; }
           .cockpit-corner { width: 45px; height: 45px; }
           .compass-bar { display: none; }
+          .torso-section { width: 50px; }
+          .torso-alignment { width: 38px; height: 38px; }
+          .alignment-ring { width: 30px; height: 30px; }
+          .torso-indicator { height: 12px; }
+          .leg-indicator { 
+            top: 3px;
+            border-left-width: 3px;
+            border-right-width: 3px;
+            border-bottom-width: 6px;
+          }
           .radar-panel { 
             width: 90px; 
             height: 90px; 
@@ -794,7 +894,7 @@ export class HUD {
         <div class="crosshair-line right"></div>
         <div class="crosshair-dot"></div>
       </div>
-
+      
       <!-- Compass -->
       <div class="compass-bar">
         <div class="compass-strip-container">
@@ -823,6 +923,19 @@ export class HUD {
 
       <!-- Bottom Panel -->
       <div class="bottom-panel">
+        <!-- Torso Alignment -->
+        <div class="panel-section torso-section">
+          <div class="panel-label">Torso</div>
+          <div class="torso-alignment">
+            <div class="torso-alignment-inner">
+              <div class="alignment-ring"></div>
+              <div class="leg-indicator"></div>
+              <div class="torso-indicator" id="torso-indicator"></div>
+              <div class="alignment-center"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Heat -->
         <div class="panel-section heat-section">
           <div class="panel-label">Heat</div>
@@ -830,10 +943,10 @@ export class HUD {
             <div class="heat-bar-bg">
               <div class="heat-bar-fill" id="heat-fill" style="width: 0%"></div>
             </div>
-            <div class="heat-value" id="heat-value">0%</div>
-          </div>
+          <div class="heat-value" id="heat-value">0%</div>
         </div>
-
+      </div>
+      
         <!-- Armor -->
         <div class="panel-section armor-section">
           <div class="panel-label">Armor</div>
@@ -851,24 +964,24 @@ export class HUD {
         <div class="panel-section speed-section">
           <div class="panel-label">Speed</div>
           <div class="speed-display">
-            <div class="speed-value" id="speed-value">0</div>
+        <div class="speed-value" id="speed-value">0</div>
             <div class="speed-unit">KPH</div>
           </div>
-        </div>
-
+      </div>
+      
         <!-- Weapons -->
         <div class="panel-section weapons-section">
           <div class="panel-label">Weapons</div>
           <div class="weapons-grid" id="weapon-slots"></div>
         </div>
       </div>
-
+      
       <!-- Warning Overlay -->
       <div class="warning-overlay" id="warning-text">WARNING</div>
-
+      
       <!-- Scanlines -->
       <div class="scanlines"></div>
-
+      
       <!-- Targeting Canvas -->
       <canvas id="targeting-canvas"></canvas>
     `;
@@ -897,6 +1010,7 @@ export class HUD {
       this.radarCtx = this.radarCanvas.getContext('2d')!;
       this.compassHeading = this.hudElement.querySelector('.compass-heading')!;
       this.compassStrip = this.hudElement.querySelector('#compass-strip')!;
+      this.torsoIndicator = this.hudElement.querySelector('#torso-indicator')!;
       this.initCompassStrip();
       this.resizeTargetingCanvas();
       this.resizeRadarCanvas();
@@ -949,6 +1063,9 @@ export class HUD {
 
     // Update compass
     this.updateCompass();
+
+    // Update torso alignment indicator
+    this.updateTorsoAlignment();
   }
 
   private updateArmorDisplay(): void {
@@ -1201,6 +1318,29 @@ export class HUD {
     }
 
     this.compassHeading.textContent = `${cardinal} ${Math.round(displayHeading).toString().padStart(3, '0')}°`;
+  }
+
+  private updateTorsoAlignment(): void {
+    if (!this.torsoIndicator) return;
+
+    // Get torso and leg headings
+    const torsoHeading = this.mechData.getHeading();
+    const legHeading = this.mechData.getLegHeading();
+
+    // Calculate the relative angle between torso and legs
+    // Positive = torso is rotated clockwise from legs
+    // Negative = torso is rotated counter-clockwise from legs
+    let relativeAngle = torsoHeading - legHeading;
+
+    // Normalize to -π to π
+    while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
+    while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
+
+    // Convert to degrees for CSS rotation (negate to match visual direction)
+    // The indicator points up when aligned, so we rotate it by the relative angle
+    const rotationDeg = -(relativeAngle * 180) / Math.PI;
+
+    this.torsoIndicator.style.transform = `translateX(-50%) translateY(-100%) rotate(${rotationDeg}deg)`;
   }
 
   showWarning(message: string): void {
