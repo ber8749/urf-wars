@@ -228,6 +228,11 @@ export class Game {
         const mech = entity.getComponent(MechComponent);
         return mech?.config.maxSpeed ?? 25;
       },
+      getHeading: () => {
+        // Use torso yaw for compass heading (where the pilot is looking)
+        const mech = entity.getComponent(MechComponent);
+        return mech?.torsoYaw ?? 0;
+      },
       getWeaponSystem: () => {
         const weapons = entity.getComponent(WeaponComponent);
         return {

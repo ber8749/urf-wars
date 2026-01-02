@@ -47,6 +47,7 @@ interface MechDataProvider {
   getHeatSystem(): HeatSystemInterface;
   getSpeed(): number;
   getMaxSpeed(): number;
+  getHeading(): number; // Returns heading in radians
   getWeaponSystem(): WeaponSystemInterface;
   getArmorStatus(): ArmorStatus;
   getCameraController?(): CameraControllerInterface;
@@ -74,6 +75,13 @@ export class HUD {
   private radarCanvas!: HTMLCanvasElement;
   private radarCtx!: CanvasRenderingContext2D;
   private readonly RADAR_RANGE = 100; // meters
+
+  // Compass
+  private compassHeading!: HTMLElement;
+  private compassStrip!: HTMLElement;
+  private compassInitialized: boolean = false;
+  private lastCompassHeading: number = 0;
+  private continuousHeading: number = 0;
 
   private isVisible: boolean = true;
   private lastHeatWarningState: boolean = false;
@@ -573,15 +581,66 @@ export class HUD {
           top: 38px;
           left: 50%;
           transform: translateX(-50%);
-          width: 260px;
-          height: 24px;
+          width: 280px;
+          height: 32px;
           background: linear-gradient(180deg, rgba(12, 18, 14, 0.85) 0%, rgba(8, 12, 10, 0.9) 100%);
           border: 1px solid #2a352a;
           border-radius: 3px;
           overflow: hidden;
+        }
+
+        .compass-strip-container {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+
+        .compass-strip {
+          position: absolute;
+          top: 0;
+          left: 50%;
+          height: 100%;
           display: flex;
           align-items: center;
-          justify-content: center;
+        }
+
+        .compass-tick {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 20px;
+          flex-shrink: 0;
+        }
+
+        .compass-tick-line {
+          width: 1px;
+          background: #4a5a4a;
+        }
+
+        .compass-tick-line.minor {
+          height: 6px;
+        }
+
+        .compass-tick-line.major {
+          height: 10px;
+          background: #00ff88;
+          box-shadow: 0 0 3px #00ff88;
+        }
+
+        .compass-tick-label {
+          font-size: 9px;
+          color: #00ff88;
+          margin-top: 1px;
+          font-family: 'Courier New', monospace;
+          text-shadow: 0 0 3px #00ff88;
+        }
+
+        .compass-tick-label.cardinal {
+          font-weight: bold;
+          font-size: 10px;
+          text-shadow: 0 0 4px #00ff88;
         }
 
         .compass-indicator {
@@ -590,16 +649,38 @@ export class HUD {
           left: 50%;
           transform: translateX(-50%);
           width: 2px;
-          height: 6px;
-          background: #00ff88;
-          box-shadow: 0 0 5px #00ff88;
+          height: 100%;
+          background: linear-gradient(180deg, #ff4444 0%, #ff4444 40%, transparent 40%);
+          box-shadow: 0 0 6px #ff4444;
+          z-index: 10;
+        }
+
+        .compass-indicator::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-bottom: 5px solid #ff4444;
         }
 
         .compass-heading {
+          position: absolute;
+          bottom: -18px;
+          left: 50%;
+          transform: translateX(-50%);
           color: #00ff88;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: bold;
-          letter-spacing: 2px;
+          letter-spacing: 1px;
+          text-shadow: 0 0 4px #00ff88;
+          background: rgba(8, 12, 10, 0.9);
+          padding: 1px 6px;
+          border-radius: 2px;
         }
 
         /* ========== WARNING OVERLAY ========== */
@@ -663,7 +744,8 @@ export class HUD {
           .speed-value { font-size: 26px; }
           .weapon-slot { max-width: 85px; padding: 4px 5px; }
           .cockpit-frame { border-width: 20px; }
-          .compass-bar { width: 200px; top: 32px; }
+          .compass-bar { width: 220px; top: 32px; }
+          .compass-heading { font-size: 10px; bottom: -16px; }
           .radar-panel { 
             width: 110px; 
             height: 110px; 
@@ -715,7 +797,10 @@ export class HUD {
 
       <!-- Compass -->
       <div class="compass-bar">
-        <div class="compass-indicator"></div>
+        <div class="compass-strip-container">
+          <div class="compass-strip" id="compass-strip"></div>
+          <div class="compass-indicator"></div>
+        </div>
         <span class="compass-heading">N 000°</span>
       </div>
 
@@ -810,6 +895,9 @@ export class HUD {
         '#radar-canvas'
       )! as HTMLCanvasElement;
       this.radarCtx = this.radarCanvas.getContext('2d')!;
+      this.compassHeading = this.hudElement.querySelector('.compass-heading')!;
+      this.compassStrip = this.hudElement.querySelector('#compass-strip')!;
+      this.initCompassStrip();
       this.resizeTargetingCanvas();
       this.resizeRadarCanvas();
     }
@@ -858,6 +946,9 @@ export class HUD {
 
     // Update radar
     this.updateRadar();
+
+    // Update compass
+    this.updateCompass();
   }
 
   private updateArmorDisplay(): void {
@@ -995,6 +1086,121 @@ export class HUD {
 
       ctx.shadowBlur = 0;
     }
+  }
+
+  private initCompassStrip(): void {
+    if (this.compassInitialized || !this.compassStrip) return;
+
+    // Cardinal and intercardinal labels
+    const labels: Record<number, string> = {
+      0: 'N',
+      45: 'NE',
+      90: 'E',
+      135: 'SE',
+      180: 'S',
+      225: 'SW',
+      270: 'W',
+      315: 'NW',
+    };
+
+    // Generate ticks for extended range (-540 to 900) to support multiple rotations
+    // This gives us 1440° of coverage (4 full rotations) for smooth continuous scrolling
+    // Tick every 5 degrees
+    let html = '';
+    for (let deg = -540; deg <= 900; deg += 5) {
+      const normalizedDeg = ((deg % 360) + 360) % 360;
+      const isMajor = deg % 15 === 0;
+      const isCardinal = labels[normalizedDeg] !== undefined;
+      const showDegree = deg % 30 === 0 && !isCardinal;
+
+      let label = '';
+      if (isCardinal) {
+        label = labels[normalizedDeg];
+      } else if (showDegree) {
+        label = normalizedDeg.toString();
+      }
+
+      html += `
+        <div class="compass-tick">
+          <div class="compass-tick-line ${isMajor ? 'major' : 'minor'}"></div>
+          ${label ? `<span class="compass-tick-label ${isCardinal ? 'cardinal' : ''}">${label}</span>` : ''}
+        </div>
+      `;
+    }
+
+    this.compassStrip.innerHTML = html;
+    this.compassInitialized = true;
+  }
+
+  private updateCompass(): void {
+    if (!this.compassHeading || !this.compassStrip) return;
+
+    // Get heading in radians and convert to degrees
+    const headingRad = this.mechData.getHeading();
+    // Convert from radians to degrees
+    // In THREE.js, rotation.y is 0 facing +Z, positive is counter-clockwise
+    // We want: 0° = North (+Z), 90° = East (+X), 180° = South (-Z), 270° = West (-X)
+    const headingDeg = (-headingRad * 180) / Math.PI;
+
+    // Normalize to 0-360 for display only
+    const displayHeading = ((headingDeg % 360) + 360) % 360;
+
+    // Track continuous heading for smooth scrolling (avoid jumps at 0/360 boundary)
+    // Calculate the shortest angular difference from last frame
+    let delta = headingDeg - this.lastCompassHeading;
+
+    // Wrap delta to -180 to 180 to handle the boundary crossing
+    while (delta > 180) delta -= 360;
+    while (delta < -180) delta += 360;
+
+    this.continuousHeading += delta;
+    this.lastCompassHeading = headingDeg;
+
+    // Update compass strip position using continuous heading
+    // Each tick is 20px wide, and we have ticks every 5 degrees
+    // So pixels per degree = 20 / 5 = 4
+    const pixelsPerDegree = 4;
+
+    // Strip now covers -540° to 900° (1440° total, 4 full rotations)
+    // Use continuous heading directly without normalization for smooth scrolling
+    // Strip starts at -540°, so 0° is at position 540 * 4 = 2160px from left edge
+
+    // Keep continuous heading in the middle range of the strip to avoid edge issues
+    // Safe range is roughly -180 to 540 (center of the strip)
+    // Reset when we go too far in either direction
+    while (this.continuousHeading > 540) {
+      this.continuousHeading -= 360;
+    }
+    while (this.continuousHeading < -180) {
+      this.continuousHeading += 360;
+    }
+
+    // Calculate offset - strip starts at -540°
+    // Position for heading H is: (H - (-540)) * pixelsPerDegree = (H + 540) * 4
+    const offset = (this.continuousHeading + 540) * pixelsPerDegree;
+    this.compassStrip.style.transform = `translateX(-${offset}px)`;
+
+    // Get cardinal direction
+    let cardinal: string;
+    if (displayHeading >= 337.5 || displayHeading < 22.5) {
+      cardinal = 'N';
+    } else if (displayHeading >= 22.5 && displayHeading < 67.5) {
+      cardinal = 'NE';
+    } else if (displayHeading >= 67.5 && displayHeading < 112.5) {
+      cardinal = 'E';
+    } else if (displayHeading >= 112.5 && displayHeading < 157.5) {
+      cardinal = 'SE';
+    } else if (displayHeading >= 157.5 && displayHeading < 202.5) {
+      cardinal = 'S';
+    } else if (displayHeading >= 202.5 && displayHeading < 247.5) {
+      cardinal = 'SW';
+    } else if (displayHeading >= 247.5 && displayHeading < 292.5) {
+      cardinal = 'W';
+    } else {
+      cardinal = 'NW';
+    }
+
+    this.compassHeading.textContent = `${cardinal} ${Math.round(displayHeading).toString().padStart(3, '0')}°`;
   }
 
   showWarning(message: string): void {
